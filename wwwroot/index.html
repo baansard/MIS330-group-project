@@ -1,0 +1,1257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TrailBuddy - Guided Hiking Experiences</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --tb-green: #2d6a4f;
+            --tb-green-light: #52b788;
+            --tb-green-pale: #d8f3dc;
+            --tb-dark: #1b4332;
+        }
+        body { font-family: 'Segoe UI', sans-serif; }
+        .navbar-brand { color: var(--tb-dark) !important; font-weight: 700; font-size: 1.4rem; }
+        .btn-primary { background: var(--tb-green); border-color: var(--tb-green); }
+        .btn-primary:hover { background: var(--tb-dark); border-color: var(--tb-dark); }
+        .btn-outline-primary { color: var(--tb-green); border-color: var(--tb-green); }
+        .btn-outline-primary:hover { background: var(--tb-green); border-color: var(--tb-green); color: white; }
+        .text-primary { color: var(--tb-green) !important; }
+        .bg-primary { background: var(--tb-green) !important; }
+        .hero {
+            background: linear-gradient(rgba(27,67,50,0.72), rgba(27,67,50,0.72)),
+                        url('https://images.unsplash.com/photo-1551632811-561732d1e306?w=1400') center/cover no-repeat;
+            color: white;
+            padding: 120px 0;
+        }
+        .trip-card { transition: transform 0.2s, box-shadow 0.2s; cursor: pointer; height: 100%; }
+        .trip-card:hover { transform: translateY(-5px); box-shadow: 0 10px 28px rgba(0,0,0,0.15); }
+        .trip-card img { height: 200px; object-fit: cover; }
+        .badge-easy { background: #52b788 !important; }
+        .badge-moderate { background: #e9c46a !important; color: #333 !important; }
+        .badge-hard { background: #e76f51 !important; }
+        .footer { background: var(--tb-dark); color: #ccc; padding: 48px 0 24px; }
+        .nav-link.router-active { color: var(--tb-green) !important; font-weight: 600; }
+        .employee-sidebar { background: var(--tb-dark); min-height: calc(100vh - 60px); width: 220px; min-width: 220px; }
+        .employee-sidebar .nav-link { color: #ccc; border-radius: 6px; padding: 8px 14px; }
+        .employee-sidebar .nav-link:hover, .employee-sidebar .nav-link.active { color: white; background: rgba(255,255,255,0.1); }
+        .stat-card { border-left: 4px solid var(--tb-green); }
+        [v-cloak] { display: none; }
+    </style>
+</head>
+<body class="d-flex flex-column min-vh-100">
+<div id="app" v-cloak>
+
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg bg-white shadow-sm sticky-top">
+        <div class="container">
+            <a class="navbar-brand" href="#" @click.prevent="go('/')">
+                <i class="bi bi-tree-fill me-2" style="color:var(--tb-green)"></i>TrailBuddy
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navMenu">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navMenu">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" :class="{'router-active': page === 'home'}" href="#" @click.prevent="go('/')">Home</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" :class="{'router-active': page === 'trips'}" href="#" @click.prevent="go('/trips')">Hiking Trips</a>
+                    </li>
+                </ul>
+                <ul class="navbar-nav align-items-center gap-1">
+                    <template v-if="!currentUser">
+                        <li class="nav-item">
+                            <a class="nav-link" href="#" @click.prevent="go('/login')">Login</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="btn btn-primary text-white px-3" href="#" @click.prevent="go('/register')">Sign Up</a>
+                        </li>
+                    </template>
+                    <template v-else>
+                        <li class="nav-item" v-if="currentUser.role === 'Employee'">
+                            <a class="nav-link" :class="{'router-active': page.startsWith('emp')}" href="#" @click.prevent="go('/employee')">
+                                <i class="bi bi-speedometer2 me-1"></i>Dashboard
+                            </a>
+                        </li>
+                        <li class="nav-item" v-if="currentUser.role === 'Customer'">
+                            <a class="nav-link" :class="{'router-active': page === 'myres'}" href="#" @click.prevent="go('/my-reservations')">My Reservations</a>
+                        </li>
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
+                                <i class="bi bi-person-circle me-1"></i>{{ currentUser.username }}
+                            </a>
+                            <ul class="dropdown-menu dropdown-menu-end">
+                                <li><a class="dropdown-item" href="#" @click.prevent="go('/profile')"><i class="bi bi-person me-2"></i>Profile</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item text-danger" href="#" @click.prevent="logout"><i class="bi bi-box-arrow-right me-2"></i>Logout</a></li>
+                            </ul>
+                        </li>
+                    </template>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Flash Alert -->
+    <div v-if="alert.show" class="alert mb-0 rounded-0 py-2" :class="'alert-' + alert.type" role="alert" style="border:none">
+        <div class="container d-flex justify-content-between align-items-center">
+            <span>{{ alert.message }}</span>
+            <button type="button" class="btn-close btn-sm" @click="alert.show=false"></button>
+        </div>
+    </div>
+
+    <!-- =========================================================
+         PAGE: HOME
+    ========================================================= -->
+    <div v-if="page === 'home'" class="flex-grow-1">
+        <div class="hero text-center">
+            <div class="container">
+                <h1 class="display-4 fw-bold mb-3">Discover Your Next Adventure</h1>
+                <p class="lead mb-4 opacity-75">Expert-guided hiking for all skill levels — from peaceful nature walks to epic summit climbs.</p>
+                <button class="btn btn-warning btn-lg fw-bold me-3" @click="go('/trips')">
+                    <i class="bi bi-compass me-2"></i>Browse Trips
+                </button>
+                <button class="btn btn-outline-light btn-lg" @click="scrollToAbout">Learn More</button>
+            </div>
+        </div>
+
+        <div class="bg-light py-4 border-bottom">
+            <div class="container">
+                <div class="row text-center g-3">
+                    <div class="col-6 col-md-3">
+                        <h3 class="fw-bold mb-0" style="color:var(--tb-green)">{{ trips.length }}+</h3>
+                        <small class="text-muted">Guided Trips</small>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <h3 class="fw-bold mb-0" style="color:var(--tb-green)">500+</h3>
+                        <small class="text-muted">Happy Hikers</small>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <h3 class="fw-bold mb-0" style="color:var(--tb-green)">15+</h3>
+                        <small class="text-muted">Locations</small>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <h3 class="fw-bold mb-0" style="color:var(--tb-green)">4.9 ★</h3>
+                        <small class="text-muted">Avg Rating</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="container py-5">
+            <h2 class="fw-bold mb-1">Featured Trips</h2>
+            <p class="text-muted mb-4">Handpicked adventures for every type of hiker</p>
+            <div class="row g-4">
+                <div class="col-md-4" v-for="trip in trips.slice(0,3)" :key="trip.id">
+                    <div class="card trip-card border-0 shadow-sm" @click="viewTrip(trip.id)">
+                        <img :src="trip.imageUrl" class="card-img-top" :alt="trip.name">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <h5 class="card-title mb-0">{{ trip.name }}</h5>
+                                <span class="badge ms-2" :class="'badge-' + trip.difficulty.toLowerCase()">{{ trip.difficulty }}</span>
+                            </div>
+                            <p class="text-muted small mb-2"><i class="bi bi-geo-alt me-1"></i>{{ trip.location }}</p>
+                            <p class="card-text small text-muted">{{ trip.description.slice(0, 100) }}...</p>
+                            <div class="d-flex justify-content-between align-items-center mt-3">
+                                <span class="fw-bold fs-5" style="color:var(--tb-green)">${{ trip.price }}</span>
+                                <small class="text-muted"><i class="bi bi-clock me-1"></i>{{ trip.duration }}</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="text-center mt-4">
+                <button class="btn btn-outline-primary btn-lg" @click="go('/trips')">View All Trips</button>
+            </div>
+        </div>
+
+        <div id="about" style="background:var(--tb-green-pale)" class="py-5">
+            <div class="container">
+                <div class="row align-items-center g-4">
+                    <div class="col-md-6">
+                        <h2 class="fw-bold mb-4">Why Choose TrailBuddy?</h2>
+                        <div class="d-flex mb-4">
+                            <i class="bi bi-shield-check fs-3 me-3 flex-shrink-0" style="color:var(--tb-green)"></i>
+                            <div>
+                                <strong>Certified Guides</strong>
+                                <p class="text-muted small mb-0">All guides are Wilderness First Responder certified with 5+ years of experience.</p>
+                            </div>
+                        </div>
+                        <div class="d-flex mb-4">
+                            <i class="bi bi-people fs-3 me-3 flex-shrink-0" style="color:var(--tb-green)"></i>
+                            <div>
+                                <strong>Small Groups</strong>
+                                <p class="text-muted small mb-0">Max 12 participants per trip for a personal, safe, and memorable experience.</p>
+                            </div>
+                        </div>
+                        <div class="d-flex">
+                            <i class="bi bi-star fs-3 me-3 flex-shrink-0" style="color:var(--tb-green)"></i>
+                            <div>
+                                <strong>All Skill Levels</strong>
+                                <p class="text-muted small mb-0">From beginner-friendly walks to expert mountaineering expeditions.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <img src="https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=600" class="img-fluid rounded-3 shadow" alt="Hikers on mountain">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- =========================================================
+         PAGE: TRIP LIST
+    ========================================================= -->
+    <div v-else-if="page === 'trips'" class="flex-grow-1 container py-5">
+        <h2 class="fw-bold mb-1">Hiking Trips</h2>
+        <p class="text-muted mb-4">Find your perfect adventure</p>
+
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <div class="input-group">
+                            <span class="input-group-text bg-white"><i class="bi bi-search text-muted"></i></span>
+                            <input type="text" class="form-control border-start-0" placeholder="Search trips, locations..." v-model="search.keyword">
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <select class="form-select" v-model="search.difficulty">
+                            <option value="">All Levels</option>
+                            <option>Easy</option>
+                            <option>Moderate</option>
+                            <option>Hard</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <select class="form-select" v-model="search.maxPrice">
+                            <option value="">Any Price</option>
+                            <option value="50">Under $50</option>
+                            <option value="100">Under $100</option>
+                            <option value="200">Under $200</option>
+                            <option value="9999">Under $500</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <select class="form-select" v-model="search.sort">
+                            <option value="name">Name A–Z</option>
+                            <option value="price_asc">Price ↑</option>
+                            <option value="price_desc">Price ↓</option>
+                            <option value="difficulty">Difficulty</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <button class="btn btn-outline-secondary w-100" @click="clearSearch">
+                            <i class="bi bi-x-circle me-1"></i>Clear
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <p class="text-muted small mb-3">Showing {{ filteredTrips.length }} trip(s)</p>
+
+        <div class="row g-4" v-if="filteredTrips.length">
+            <div class="col-md-4" v-for="trip in filteredTrips" :key="trip.id">
+                <div class="card trip-card border-0 shadow-sm" @click="viewTrip(trip.id)">
+                    <img :src="trip.imageUrl" class="card-img-top" :alt="trip.name">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <h5 class="card-title mb-0">{{ trip.name }}</h5>
+                            <span class="badge ms-2" :class="'badge-' + trip.difficulty.toLowerCase()">{{ trip.difficulty }}</span>
+                        </div>
+                        <p class="text-muted small mb-1"><i class="bi bi-geo-alt me-1"></i>{{ trip.location }}</p>
+                        <p class="text-muted small mb-2"><i class="bi bi-clock me-1"></i>{{ trip.duration }}&nbsp;&nbsp;<i class="bi bi-people me-1"></i>Max {{ trip.maxParticipants }}</p>
+                        <p class="card-text small text-muted">{{ trip.description.slice(0, 90) }}...</p>
+                        <div class="d-flex justify-content-between align-items-center mt-3">
+                            <span class="fw-bold fs-5" style="color:var(--tb-green)">${{ trip.price }}</span>
+                            <span class="badge" :class="trip.spotsLeft > 0 ? 'bg-success' : 'bg-danger'">
+                                {{ trip.spotsLeft > 0 ? trip.spotsLeft + ' spots left' : 'Full' }}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="card-footer bg-white border-0 pb-3 pt-0">
+                        <button class="btn w-100" :class="trip.spotsLeft > 0 ? 'btn-primary' : 'btn-secondary'" :disabled="trip.spotsLeft === 0" @click.stop="viewTrip(trip.id)">
+                            {{ trip.spotsLeft > 0 ? 'View & Reserve' : 'Fully Booked' }}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div v-else class="text-center py-5">
+            <i class="bi bi-search display-4 text-muted"></i>
+            <p class="text-muted mt-3">No trips match your search.</p>
+            <button class="btn btn-outline-primary" @click="clearSearch">Clear Filters</button>
+        </div>
+    </div>
+
+    <!-- =========================================================
+         PAGE: TRIP DETAIL
+    ========================================================= -->
+    <div v-else-if="page === 'tripDetail' && selectedTrip" class="flex-grow-1 container py-5">
+        <nav aria-label="breadcrumb" class="mb-4">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="#" @click.prevent="go('/trips')" style="color:var(--tb-green)">Trips</a></li>
+                <li class="breadcrumb-item active">{{ selectedTrip.name }}</li>
+            </ol>
+        </nav>
+        <div class="row g-4">
+            <div class="col-md-7">
+                <img :src="selectedTrip.imageUrl" class="img-fluid rounded-3 shadow mb-4 w-100" style="height:340px;object-fit:cover" :alt="selectedTrip.name">
+                <h2 class="fw-bold">{{ selectedTrip.name }}</h2>
+                <div class="d-flex flex-wrap gap-2 mb-3">
+                    <span class="badge fs-6 px-3 py-2" :class="'badge-' + selectedTrip.difficulty.toLowerCase()">{{ selectedTrip.difficulty }}</span>
+                    <span class="badge bg-secondary fs-6 px-3 py-2"><i class="bi bi-clock me-1"></i>{{ selectedTrip.duration }}</span>
+                    <span class="badge bg-info text-dark fs-6 px-3 py-2"><i class="bi bi-geo-alt me-1"></i>{{ selectedTrip.location }}</span>
+                </div>
+                <p class="lead text-muted">{{ selectedTrip.description }}</p>
+                <hr>
+                <h5 class="fw-bold">Trip Highlights</h5>
+                <ul class="list-unstyled">
+                    <li class="mb-1" v-for="h in selectedTrip.highlights" :key="h">
+                        <i class="bi bi-check2-circle me-2" style="color:var(--tb-green)"></i>{{ h }}
+                    </li>
+                </ul>
+                <h5 class="fw-bold mt-4">What's Included</h5>
+                <ul class="list-unstyled">
+                    <li class="mb-1"><i class="bi bi-check2-circle me-2" style="color:var(--tb-green)"></i>Certified wilderness guide</li>
+                    <li class="mb-1"><i class="bi bi-check2-circle me-2" style="color:var(--tb-green)"></i>Safety and first aid equipment</li>
+                    <li class="mb-1"><i class="bi bi-check2-circle me-2" style="color:var(--tb-green)"></i>Trail snacks and water</li>
+                    <li class="mb-1"><i class="bi bi-check2-circle me-2" style="color:var(--tb-green)"></i>Route maps and briefing</li>
+                </ul>
+            </div>
+            <div class="col-md-5">
+                <div class="card border-0 shadow sticky-top" style="top:76px">
+                    <div class="card-body p-4">
+                        <h3 class="fw-bold mb-0" style="color:var(--tb-green)">${{ selectedTrip.price }}<small class="fs-6 text-muted fw-normal"> / person</small></h3>
+                        <p class="text-muted small mb-3">⭐ 4.9 &middot; {{ selectedTrip.reviewCount }} reviews</p>
+                        <table class="table table-sm table-borderless mb-3">
+                            <tr><td class="text-muted ps-0">Guide</td><td class="fw-semibold">{{ selectedTrip.guide }}</td></tr>
+                            <tr><td class="text-muted ps-0">Duration</td><td>{{ selectedTrip.duration }}</td></tr>
+                            <tr><td class="text-muted ps-0">Difficulty</td><td>{{ selectedTrip.difficulty }}</td></tr>
+                            <tr><td class="text-muted ps-0">Group Size</td><td>Max {{ selectedTrip.maxParticipants }}</td></tr>
+                            <tr><td class="text-muted ps-0">Availability</td><td>{{ selectedTrip.spotsLeft }} spots left</td></tr>
+                            <tr><td class="text-muted ps-0">Next Date</td><td>{{ fmtDate(selectedTrip.nextDate) }}</td></tr>
+                        </table>
+                        <template v-if="selectedTrip.spotsLeft > 0">
+                            <button v-if="currentUser && currentUser.role === 'Customer'" class="btn btn-primary w-100 btn-lg mb-2" @click="go('/reserve/' + selectedTrip.id)">
+                                <i class="bi bi-calendar-check me-2"></i>Reserve This Trip
+                            </button>
+                            <button v-else-if="!currentUser" class="btn btn-primary w-100 btn-lg mb-2" @click="go('/login')">
+                                <i class="bi bi-box-arrow-in-right me-2"></i>Login to Reserve
+                            </button>
+                            <p v-if="currentUser && currentUser.role === 'Employee'" class="text-muted small text-center">Employees cannot make reservations.</p>
+                            <p v-else class="text-muted small text-center mb-0">No payment charged until confirmation</p>
+                        </template>
+                        <button v-else class="btn btn-secondary w-100 btn-lg" disabled>Fully Booked</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- =========================================================
+         PAGE: RESERVATION FORM
+    ========================================================= -->
+    <div v-else-if="page === 'reserve' && selectedTrip" class="flex-grow-1 container py-5">
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <nav aria-label="breadcrumb" class="mb-4">
+                    <ol class="breadcrumb">
+                        <li class="breadcrumb-item"><a href="#" @click.prevent="go('/trips')" style="color:var(--tb-green)">Trips</a></li>
+                        <li class="breadcrumb-item"><a href="#" @click.prevent="viewTrip(selectedTrip.id)" style="color:var(--tb-green)">{{ selectedTrip.name }}</a></li>
+                        <li class="breadcrumb-item active">Reserve</li>
+                    </ol>
+                </nav>
+                <div class="card border-0 shadow-sm">
+                    <div class="card-body p-4">
+                        <div class="d-flex align-items-center mb-4 p-3 rounded-3" style="background:var(--tb-green-pale)">
+                            <img :src="selectedTrip.imageUrl" style="width:80px;height:60px;object-fit:cover;border-radius:8px" class="me-3 flex-shrink-0">
+                            <div>
+                                <h6 class="fw-bold mb-0">{{ selectedTrip.name }}</h6>
+                                <small class="text-muted">{{ selectedTrip.location }} &middot; {{ selectedTrip.duration }} &middot; ${{ selectedTrip.price }}/person</small>
+                            </div>
+                        </div>
+                        <h5 class="fw-bold mb-3">Reservation Details</h5>
+                        <form @submit.prevent="submitReservation">
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold">First Name</label>
+                                    <input type="text" class="form-control" v-model="resForm.firstName" required>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold">Last Name</label>
+                                    <input type="text" class="form-control" v-model="resForm.lastName" required>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold">Email</label>
+                                    <input type="email" class="form-control" v-model="resForm.email" required>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold">Phone</label>
+                                    <input type="tel" class="form-control" v-model="resForm.phone" required placeholder="555-000-0000">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold">Preferred Date</label>
+                                    <input type="date" class="form-control" v-model="resForm.date" :min="todayStr" required>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold">Participants</label>
+                                    <select class="form-select" v-model.number="resForm.participants">
+                                        <option v-for="n in Math.min(selectedTrip.spotsLeft, 8)" :value="n">{{ n }}</option>
+                                    </select>
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label fw-semibold">Special Requests / Medical Info</label>
+                                    <textarea class="form-control" rows="3" v-model="resForm.notes" placeholder="Dietary restrictions, prior injuries, experience level..."></textarea>
+                                </div>
+                            </div>
+                            <hr class="my-4">
+                            <div class="d-flex justify-content-between align-items-center mb-3 p-3 rounded-3 bg-light">
+                                <div>
+                                    <span class="fw-semibold">Total Cost</span>
+                                    <p class="text-muted small mb-0">${{ selectedTrip.price }} × {{ resForm.participants }} participant(s)</p>
+                                </div>
+                                <span class="fw-bold fs-3" style="color:var(--tb-green)">${{ (selectedTrip.price * resForm.participants).toFixed(2) }}</span>
+                            </div>
+                            <div class="d-grid gap-2">
+                                <button type="submit" class="btn btn-primary btn-lg">
+                                    <i class="bi bi-calendar-check me-2"></i>Confirm Reservation
+                                </button>
+                                <button type="button" class="btn btn-outline-secondary" @click="viewTrip(selectedTrip.id)">Back</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- =========================================================
+         PAGE: CONFIRMATION
+    ========================================================= -->
+    <div v-else-if="page === 'confirmation'" class="flex-grow-1 container py-5">
+        <div class="row justify-content-center">
+            <div class="col-md-6 text-center">
+                <div class="card border-0 shadow-sm p-5">
+                    <i class="bi bi-check-circle-fill text-success" style="font-size:4rem"></i>
+                    <h2 class="fw-bold mt-3 mb-1">Reservation Confirmed!</h2>
+                    <p class="text-muted">Booking Reference: <strong>#{{ lastRes ? lastRes.id : '' }}</strong></p>
+                    <div class="alert alert-success text-start mt-2" v-if="lastRes">
+                        <strong>{{ lastRes.tripName }}</strong><br>
+                        <small><i class="bi bi-calendar me-1"></i>{{ fmtDate(lastRes.date) }}</small><br>
+                        <small><i class="bi bi-people me-1"></i>{{ lastRes.participants }} participant(s) &middot; <strong>Total: ${{ lastRes.total }}</strong></small>
+                    </div>
+                    <p class="text-muted small">A confirmation email will be sent to <strong>{{ lastRes ? lastRes.email : '' }}</strong></p>
+                    <div class="d-grid gap-2 mt-2">
+                        <button class="btn btn-primary" @click="go('/my-reservations')">View My Reservations</button>
+                        <button class="btn btn-outline-primary" @click="go('/trips')">Browse More Trips</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- =========================================================
+         PAGE: MY RESERVATIONS
+    ========================================================= -->
+    <div v-else-if="page === 'myres'" class="flex-grow-1 container py-5">
+        <h2 class="fw-bold mb-1">My Reservations</h2>
+        <p class="text-muted mb-4">Track and manage your upcoming hikes</p>
+        <div v-if="myReservations.length === 0" class="text-center py-5">
+            <i class="bi bi-calendar-x display-4 text-muted"></i>
+            <p class="text-muted mt-3">You have no reservations yet.</p>
+            <button class="btn btn-primary" @click="go('/trips')">Browse Trips</button>
+        </div>
+        <div class="row g-3" v-else>
+            <div class="col-12" v-for="res in myReservations" :key="res.id">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-body">
+                        <div class="row align-items-center g-2">
+                            <div class="col-md-1">
+                                <img :src="tripImg(res.tripId)" style="width:100%;height:60px;object-fit:cover;border-radius:6px">
+                            </div>
+                            <div class="col-md-5">
+                                <h6 class="fw-bold mb-0">{{ res.tripName }}</h6>
+                                <small class="text-muted">
+                                    <i class="bi bi-calendar me-1"></i>{{ fmtDate(res.date) }} &nbsp;·&nbsp;
+                                    <i class="bi bi-people me-1"></i>{{ res.participants }} participant(s)
+                                </small>
+                            </div>
+                            <div class="col-md-2 text-center">
+                                <span class="badge fs-6" :class="{
+                                    'bg-warning text-dark': res.status === 'Pending',
+                                    'bg-success': res.status === 'Confirmed',
+                                    'bg-danger': res.status === 'Cancelled',
+                                    'bg-secondary': res.status === 'Completed'
+                                }">{{ res.status }}</span>
+                            </div>
+                            <div class="col-md-2 text-center fw-bold" style="color:var(--tb-green)">${{ res.total }}</div>
+                            <div class="col-md-2 text-end">
+                                <button v-if="res.status === 'Pending' || res.status === 'Confirmed'"
+                                    class="btn btn-sm btn-outline-danger"
+                                    @click="cancelRes(res.id)">
+                                    <i class="bi bi-x-circle me-1"></i>Cancel
+                                </button>
+                                <span v-else class="text-muted small">—</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- =========================================================
+         PAGE: LOGIN
+    ========================================================= -->
+    <div v-else-if="page === 'login'" class="flex-grow-1 d-flex align-items-center py-5">
+        <div class="container">
+            <div class="row justify-content-center">
+                <div class="col-md-5">
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-body p-5">
+                            <div class="text-center mb-4">
+                                <i class="bi bi-tree-fill display-5" style="color:var(--tb-green)"></i>
+                                <h3 class="fw-bold mt-2">Welcome Back</h3>
+                                <p class="text-muted">Sign in to your TrailBuddy account</p>
+                            </div>
+                            <form @submit.prevent="login">
+                                <div class="mb-3">
+                                    <label class="form-label fw-semibold">Username</label>
+                                    <input type="text" class="form-control" v-model="loginForm.username" placeholder="Enter username" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label fw-semibold">Password</label>
+                                    <input type="password" class="form-control" v-model="loginForm.password" placeholder="Enter password" required>
+                                </div>
+                                <div v-if="loginErr" class="alert alert-danger py-2 small">{{ loginErr }}</div>
+                                <button type="submit" class="btn btn-primary w-100 mb-3">Sign In</button>
+                                <p class="text-center text-muted small mb-3">
+                                    No account? <a href="#" @click.prevent="go('/register')" style="color:var(--tb-green)">Sign up free</a>
+                                </p>
+                                <hr>
+                                <p class="text-center text-muted small mb-2">Demo accounts:</p>
+                                <div class="d-flex gap-2">
+                                    <button type="button" class="btn btn-outline-secondary btn-sm flex-fill" @click="loginForm={username:'hiker123',password:'password123'}">
+                                        <i class="bi bi-person me-1"></i>Customer
+                                    </button>
+                                    <button type="button" class="btn btn-outline-secondary btn-sm flex-fill" @click="loginForm={username:'admin',password:'admin123'}">
+                                        <i class="bi bi-person-badge me-1"></i>Employee
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- =========================================================
+         PAGE: REGISTER
+    ========================================================= -->
+    <div v-else-if="page === 'register'" class="flex-grow-1 d-flex align-items-center py-5">
+        <div class="container">
+            <div class="row justify-content-center">
+                <div class="col-md-6">
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-body p-5">
+                            <div class="text-center mb-4">
+                                <i class="bi bi-tree-fill display-5" style="color:var(--tb-green)"></i>
+                                <h3 class="fw-bold mt-2">Create Account</h3>
+                                <p class="text-muted">Join TrailBuddy and start exploring</p>
+                            </div>
+                            <form @submit.prevent="register">
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-semibold">First Name</label>
+                                        <input type="text" class="form-control" v-model="regForm.firstName" required>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-semibold">Last Name</label>
+                                        <input type="text" class="form-control" v-model="regForm.lastName" required>
+                                    </div>
+                                    <div class="col-12">
+                                        <label class="form-label fw-semibold">Username</label>
+                                        <input type="text" class="form-control" v-model="regForm.username" required>
+                                    </div>
+                                    <div class="col-12">
+                                        <label class="form-label fw-semibold">Email</label>
+                                        <input type="email" class="form-control" v-model="regForm.email" required>
+                                    </div>
+                                    <div class="col-12">
+                                        <label class="form-label fw-semibold">Password</label>
+                                        <input type="password" class="form-control" v-model="regForm.password" required minlength="6" placeholder="At least 6 characters">
+                                    </div>
+                                    <div class="col-12">
+                                        <div v-if="regErr" class="alert alert-danger py-2 small">{{ regErr }}</div>
+                                        <button type="submit" class="btn btn-primary w-100">Create Account</button>
+                                    </div>
+                                </div>
+                                <p class="text-center text-muted small mt-3">
+                                    Already have an account? <a href="#" @click.prevent="go('/login')" style="color:var(--tb-green)">Sign in</a>
+                                </p>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- =========================================================
+         PAGE: PROFILE
+    ========================================================= -->
+    <div v-else-if="page === 'profile' && currentUser" class="flex-grow-1 container py-5">
+        <h2 class="fw-bold mb-4">My Profile</h2>
+        <div class="row g-4">
+            <div class="col-md-4">
+                <div class="card border-0 shadow-sm text-center p-4">
+                    <div class="bg-light rounded-circle d-flex align-items-center justify-content-center mx-auto mb-3" style="width:90px;height:90px">
+                        <i class="bi bi-person-fill display-5 text-muted"></i>
+                    </div>
+                    <h5 class="fw-bold mb-0">{{ currentUser.username }}</h5>
+                    <span class="badge mt-1" :class="currentUser.role === 'Employee' ? 'bg-warning text-dark' : 'bg-success'">{{ currentUser.role }}</span>
+                    <p class="text-muted small mt-2 mb-1"><i class="bi bi-envelope me-2"></i>{{ currentUser.email }}</p>
+                    <p class="text-muted small mb-0"><i class="bi bi-calendar me-2"></i>Member since {{ fmtDate(currentUser.createdAt) }}</p>
+                </div>
+            </div>
+            <div class="col-md-8">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-body p-4">
+                        <h5 class="fw-bold mb-4">Edit Profile</h5>
+                        <form @submit.prevent="saveProfile">
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold">First Name</label>
+                                    <input type="text" class="form-control" v-model="profForm.firstName">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold">Last Name</label>
+                                    <input type="text" class="form-control" v-model="profForm.lastName">
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label fw-semibold">Email</label>
+                                    <input type="email" class="form-control" v-model="profForm.email">
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label fw-semibold">Phone</label>
+                                    <input type="tel" class="form-control" v-model="profForm.phone">
+                                </div>
+                                <div class="col-12">
+                                    <button type="submit" class="btn btn-primary px-4">Save Changes</button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- =========================================================
+         PAGE: EMPLOYEE LAYOUT (shared sidebar)
+    ========================================================= -->
+    <div v-else-if="page.startsWith('emp') && currentUser && currentUser.role === 'Employee'" class="flex-grow-1 d-flex">
+        <!-- Sidebar -->
+        <div class="employee-sidebar p-3 flex-shrink-0">
+            <p class="text-uppercase fw-bold small mb-3 mt-2" style="color:#6c9e80;letter-spacing:.05em">Management</p>
+            <nav class="nav flex-column gap-1">
+                <a href="#" class="nav-link" :class="{active: page === 'empDash'}" @click.prevent="go('/employee')">
+                    <i class="bi bi-speedometer2 me-2"></i>Dashboard
+                </a>
+                <a href="#" class="nav-link" :class="{active: page === 'empTrips'}" @click.prevent="go('/employee/trips')">
+                    <i class="bi bi-map me-2"></i>Manage Trips
+                </a>
+                <a href="#" class="nav-link" :class="{active: page === 'empRes'}" @click.prevent="go('/employee/reservations')">
+                    <i class="bi bi-calendar-check me-2"></i>Reservations
+                </a>
+            </nav>
+        </div>
+
+        <!-- Employee: Dashboard -->
+        <div v-if="page === 'empDash'" class="flex-grow-1 p-4">
+            <h4 class="fw-bold mb-4">Employee Dashboard</h4>
+            <div class="row g-4 mb-4">
+                <div class="col-md-3">
+                    <div class="card border-0 shadow-sm stat-card p-3">
+                        <p class="text-muted small mb-1">Total Trips</p>
+                        <h2 class="fw-bold mb-0">{{ trips.length }}</h2>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card border-0 shadow-sm stat-card p-3">
+                        <p class="text-muted small mb-1">Reservations</p>
+                        <h2 class="fw-bold mb-0">{{ reservations.length }}</h2>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card border-0 shadow-sm stat-card p-3">
+                        <p class="text-muted small mb-1">Pending</p>
+                        <h2 class="fw-bold mb-0">{{ reservations.filter(r=>r.status==='Pending').length }}</h2>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card border-0 shadow-sm stat-card p-3">
+                        <p class="text-muted small mb-1">Total Revenue</p>
+                        <h2 class="fw-bold mb-0">${{ totalRevenue }}</h2>
+                    </div>
+                </div>
+            </div>
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <h6 class="fw-bold mb-3">Recent Reservations</h6>
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr><th>#</th><th>Customer</th><th>Trip</th><th>Date</th><th>Status</th><th>Total</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="res in reservations.slice(-5).reverse()" :key="res.id">
+                                <td class="text-muted">#{{ res.id }}</td>
+                                <td>{{ res.firstName }} {{ res.lastName }}</td>
+                                <td>{{ res.tripName }}</td>
+                                <td>{{ fmtDate(res.date) }}</td>
+                                <td>
+                                    <span class="badge" :class="{
+                                        'bg-warning text-dark': res.status==='Pending',
+                                        'bg-success': res.status==='Confirmed',
+                                        'bg-danger': res.status==='Cancelled',
+                                        'bg-secondary': res.status==='Completed'
+                                    }">{{ res.status }}</span>
+                                </td>
+                                <td>${{ res.total }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Employee: Manage Trips -->
+        <div v-else-if="page === 'empTrips'" class="flex-grow-1 p-4">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h4 class="fw-bold mb-0">Manage Trips</h4>
+                <button class="btn btn-primary" @click="openTripModal(null)">
+                    <i class="bi bi-plus-lg me-1"></i>Add New Trip
+                </button>
+            </div>
+            <div class="card border-0 shadow-sm">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr><th>Trip Name</th><th>Difficulty</th><th>Duration</th><th>Price</th><th>Spots</th><th>Status</th><th>Actions</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="trip in trips" :key="trip.id">
+                                <td class="fw-semibold">{{ trip.name }}</td>
+                                <td><span class="badge" :class="'badge-' + trip.difficulty.toLowerCase()">{{ trip.difficulty }}</span></td>
+                                <td>{{ trip.duration }}</td>
+                                <td>${{ trip.price }}</td>
+                                <td>{{ trip.spotsLeft }} / {{ trip.maxParticipants }}</td>
+                                <td><span class="badge" :class="trip.spotsLeft > 0 ? 'bg-success' : 'bg-danger'">{{ trip.spotsLeft > 0 ? 'Available' : 'Full' }}</span></td>
+                                <td>
+                                    <button class="btn btn-sm btn-outline-primary me-1" @click="openTripModal(trip)"><i class="bi bi-pencil"></i></button>
+                                    <button class="btn btn-sm btn-outline-danger" @click="deleteTrip(trip.id)"><i class="bi bi-trash"></i></button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Employee: Manage Reservations -->
+        <div v-else-if="page === 'empRes'" class="flex-grow-1 p-4">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h4 class="fw-bold mb-0">Manage Reservations</h4>
+                <div class="d-flex gap-2">
+                    <input type="text" class="form-control" placeholder="Search customer or trip..." v-model="empSearch" style="width:230px">
+                    <select class="form-select" v-model="empStatusFilter" style="width:150px">
+                        <option value="">All Status</option>
+                        <option>Pending</option>
+                        <option>Confirmed</option>
+                        <option>Cancelled</option>
+                        <option>Completed</option>
+                    </select>
+                </div>
+            </div>
+            <div class="card border-0 shadow-sm">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr><th>#</th><th>Customer</th><th>Trip</th><th>Date</th><th>Pax</th><th>Total</th><th>Status</th><th>Update</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="res in filteredEmpRes" :key="res.id">
+                                <td class="text-muted">#{{ res.id }}</td>
+                                <td>{{ res.firstName }} {{ res.lastName }}<br><small class="text-muted">{{ res.email }}</small></td>
+                                <td>{{ res.tripName }}</td>
+                                <td>{{ fmtDate(res.date) }}</td>
+                                <td class="text-center">{{ res.participants }}</td>
+                                <td>${{ res.total }}</td>
+                                <td>
+                                    <span class="badge" :class="{
+                                        'bg-warning text-dark': res.status==='Pending',
+                                        'bg-success': res.status==='Confirmed',
+                                        'bg-danger': res.status==='Cancelled',
+                                        'bg-secondary': res.status==='Completed'
+                                    }">{{ res.status }}</span>
+                                </td>
+                                <td>
+                                    <select class="form-select form-select-sm" style="width:130px" v-model="res.status" @change="flash('Reservation #' + res.id + ' updated.')">
+                                        <option>Pending</option>
+                                        <option>Confirmed</option>
+                                        <option>Cancelled</option>
+                                        <option>Completed</option>
+                                    </select>
+                                </td>
+                            </tr>
+                            <tr v-if="!filteredEmpRes.length">
+                                <td colspan="8" class="text-center text-muted py-4">No reservations found.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- =========================================================
+         PAGE: 404
+    ========================================================= -->
+    <div v-else class="flex-grow-1 d-flex align-items-center justify-content-center text-center py-5">
+        <div>
+            <i class="bi bi-map display-1 text-muted"></i>
+            <h3 class="mt-3 fw-bold">Trail Not Found</h3>
+            <p class="text-muted">The page you're looking for doesn't exist.</p>
+            <button class="btn btn-primary" @click="go('/')">Go Home</button>
+        </div>
+    </div>
+
+    <!-- =========================================================
+         MODAL: Add / Edit Trip
+    ========================================================= -->
+    <div class="modal fade" id="tripModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold">{{ tripModalMode === 'create' ? 'Add New Trip' : 'Edit Trip' }}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="tripForm" @submit.prevent="saveTripModal">
+                        <div class="row g-3">
+                            <div class="col-12">
+                                <label class="form-label fw-semibold">Trip Name *</label>
+                                <input type="text" class="form-control" v-model="tripForm.name" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Location *</label>
+                                <input type="text" class="form-control" v-model="tripForm.location" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Guide Name *</label>
+                                <input type="text" class="form-control" v-model="tripForm.guide" required>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold">Difficulty</label>
+                                <select class="form-select" v-model="tripForm.difficulty">
+                                    <option>Easy</option>
+                                    <option>Moderate</option>
+                                    <option>Hard</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold">Duration *</label>
+                                <input type="text" class="form-control" v-model="tripForm.duration" placeholder="e.g. 6 hours" required>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold">Price ($) *</label>
+                                <input type="number" class="form-control" v-model.number="tripForm.price" min="1" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Max Participants *</label>
+                                <input type="number" class="form-control" v-model.number="tripForm.maxParticipants" min="1" max="50" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Next Date *</label>
+                                <input type="date" class="form-control" v-model="tripForm.nextDate" :min="todayStr" required>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label fw-semibold">Image URL</label>
+                                <input type="url" class="form-control" v-model="tripForm.imageUrl" placeholder="https://...">
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label fw-semibold">Description *</label>
+                                <textarea class="form-control" rows="3" v-model="tripForm.description" required></textarea>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" form="tripForm" class="btn btn-primary">
+                        {{ tripModalMode === 'create' ? 'Add Trip' : 'Save Changes' }}
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer mt-auto">
+        <div class="container">
+            <div class="row g-4 pb-3">
+                <div class="col-md-4">
+                    <h5 class="text-white fw-bold mb-2"><i class="bi bi-tree-fill me-2"></i>TrailBuddy</h5>
+                    <p class="small">Expert-guided hiking experiences for outdoor enthusiasts of all skill levels.</p>
+                </div>
+                <div class="col-md-4">
+                    <h6 class="text-white fw-bold mb-2">Quick Links</h6>
+                    <ul class="list-unstyled small">
+                        <li><a href="#" @click.prevent="go('/')" class="text-muted text-decoration-none">Home</a></li>
+                        <li><a href="#" @click.prevent="go('/trips')" class="text-muted text-decoration-none">Browse Trips</a></li>
+                        <li><a href="#" @click.prevent="go('/register')" class="text-muted text-decoration-none">Sign Up Free</a></li>
+                    </ul>
+                </div>
+                <div class="col-md-4">
+                    <h6 class="text-white fw-bold mb-2">Contact Us</h6>
+                    <p class="small mb-1"><i class="bi bi-envelope me-2"></i>info@trailbuddy.com</p>
+                    <p class="small mb-1"><i class="bi bi-telephone me-2"></i>(555) 123-4567</p>
+                    <p class="small mb-0"><i class="bi bi-geo-alt me-2"></i>Denver, CO 80202</p>
+                </div>
+            </div>
+            <hr style="border-color:rgba(255,255,255,0.15)">
+            <p class="text-center small mb-0">© 2025 TrailBuddy Hiking Services. All rights reserved.</p>
+        </div>
+    </footer>
+
+</div><!-- end #app -->
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+<script>
+const { createApp } = Vue;
+
+createApp({
+    data() {
+        return {
+            page: 'home',
+            currentUser: null,
+            alert: { show: false, type: 'success', message: '' },
+            lastRes: null,
+            tripIdParam: null,
+
+            // Search
+            search: { keyword: '', difficulty: '', maxPrice: '', sort: 'name' },
+            empSearch: '',
+            empStatusFilter: '',
+
+            // Forms
+            loginForm: { username: '', password: '' },
+            loginErr: '',
+            regForm: { firstName: '', lastName: '', username: '', email: '', password: '' },
+            regErr: '',
+            resForm: { firstName: '', lastName: '', email: '', phone: '', date: '', participants: 1, notes: '' },
+            profForm: { firstName: '', lastName: '', email: '', phone: '' },
+            tripForm: { name: '', location: '', guide: '', difficulty: 'Moderate', duration: '', price: 0, maxParticipants: 12, nextDate: '', imageUrl: '', description: '' },
+            tripModalMode: 'create',
+            editingTripId: null,
+
+            // ---- MOCK DATA ----
+            trips: [
+                {
+                    id: 1, name: 'Appalachian Trail Day Hike',
+                    location: 'Blue Ridge Mountains, VA', guide: 'Sarah Mitchell',
+                    difficulty: 'Easy', duration: '4 hours', price: 45,
+                    maxParticipants: 12, spotsLeft: 5, reviewCount: 48,
+                    nextDate: '2025-05-15',
+                    imageUrl: 'https://images.unsplash.com/photo-1551632811-561732d1e306?w=600',
+                    description: 'A scenic and peaceful hike through the ancient Appalachian Mountains. Perfect for beginners and families, this trail offers stunning mountain views, lush forests, and the chance to spot local wildlife.',
+                    highlights: ['Mountain summit views', 'Old-growth forest', 'Wildlife spotting', 'Wildflower meadows']
+                },
+                {
+                    id: 2, name: 'Rocky Mountain Summit Challenge',
+                    location: 'Rocky Mountain NP, CO', guide: 'Jake Thornton',
+                    difficulty: 'Hard', duration: '8 hours', price: 120,
+                    maxParticipants: 8, spotsLeft: 3, reviewCount: 32,
+                    nextDate: '2025-06-01',
+                    imageUrl: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=600',
+                    description: 'Conquer one of Colorado\'s most breathtaking peaks with our expert mountaineering guide. This demanding climb rewards you with 360-degree panoramic views and an unforgettable achievement.',
+                    highlights: ['Summit at 14,000+ ft', 'Glacier views', 'Alpine meadows', 'Mountain goat sightings']
+                },
+                {
+                    id: 3, name: 'Cascade Waterfall Loop',
+                    location: 'Columbia River Gorge, OR', guide: 'Emma Chen',
+                    difficulty: 'Moderate', duration: '6 hours', price: 75,
+                    maxParticipants: 10, spotsLeft: 8, reviewCount: 61,
+                    nextDate: '2025-05-22',
+                    imageUrl: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=600',
+                    description: 'Explore the stunning Columbia River Gorge and discover a series of magnificent waterfalls. This moderate loop winds through ancient fir forests and offers spectacular gorge overlooks.',
+                    highlights: ['7 waterfalls', 'Gorge overlooks', 'Ancient fir forest', 'Swimming holes']
+                },
+                {
+                    id: 4, name: 'Grand Canyon Rim to River',
+                    location: 'Grand Canyon NP, AZ', guide: 'Marcus Rivera',
+                    difficulty: 'Hard', duration: '2 days', price: 250,
+                    maxParticipants: 6, spotsLeft: 2, reviewCount: 24,
+                    nextDate: '2025-07-10',
+                    imageUrl: 'https://images.unsplash.com/photo-1474044159687-1ee9f3a51722?w=600',
+                    description: 'Embark on the ultimate Grand Canyon adventure, descending from the South Rim to the Colorado River and back. A physically demanding but life-changing multi-day journey into one of the world\'s great natural wonders.',
+                    highlights: ['Colorado River access', 'Overnight at Phantom Ranch', 'Billion-year-old rock layers', 'Canyon stargazing']
+                },
+                {
+                    id: 5, name: 'Smoky Mountains Wildflower Walk',
+                    location: 'Great Smoky Mountains, TN', guide: 'Linda Park',
+                    difficulty: 'Easy', duration: '3 hours', price: 35,
+                    maxParticipants: 15, spotsLeft: 10, reviewCount: 89,
+                    nextDate: '2025-05-10',
+                    imageUrl: 'https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?w=600',
+                    description: 'A gentle and enchanting walk through the Great Smoky Mountains during peak wildflower season. Our botanist guide will help you identify over 50 species of native wildflowers in full bloom.',
+                    highlights: ['50+ wildflower species', 'Historic homesteads', 'Creek crossings', 'Butterfly meadow']
+                },
+                {
+                    id: 6, name: 'Zion Narrows Adventure',
+                    location: 'Zion NP, UT', guide: 'Chris Bowen',
+                    difficulty: 'Moderate', duration: '7 hours', price: 95,
+                    maxParticipants: 10, spotsLeft: 0, reviewCount: 77,
+                    nextDate: '2025-06-15',
+                    imageUrl: 'https://images.unsplash.com/photo-1542401886-65d6c61db217?w=600',
+                    description: 'Wade through the famous Virgin River and hike through stunning slot canyons. Experience towering sandstone walls rising 1,000 feet above you in this iconic Utah adventure.',
+                    highlights: ['Slot canyon walls', 'River wading', 'Hanging gardens', 'Weeping Rock']
+                },
+                {
+                    id: 7, name: 'Olympic Rain Forest Trek',
+                    location: 'Olympic NP, WA', guide: 'Nina Walsh',
+                    difficulty: 'Easy', duration: '4 hours', price: 55,
+                    maxParticipants: 12, spotsLeft: 7, reviewCount: 43,
+                    nextDate: '2025-05-28',
+                    imageUrl: 'https://images.unsplash.com/photo-1448375240586-882707db888b?w=600',
+                    description: 'Step into a magical temperate rain forest draped in emerald moss and ancient trees. The Hoh Rain Forest receives up to 14 feet of rain per year, creating a lush, otherworldly landscape.',
+                    highlights: ['Ancient Sitka spruce', 'Elk herds', 'Hall of Mosses', 'Hoh River views']
+                },
+                {
+                    id: 8, name: 'Mount Whitney Expedition',
+                    location: 'Sierra Nevada, CA', guide: 'Dave Okafor',
+                    difficulty: 'Hard', duration: '3 days', price: 350,
+                    maxParticipants: 6, spotsLeft: 4, reviewCount: 18,
+                    nextDate: '2025-08-01',
+                    imageUrl: 'https://images.unsplash.com/photo-1486870591958-9b9d0d1dda99?w=600',
+                    description: 'Stand on the highest point in the contiguous United States at 14,505 feet. This prestigious multi-day summit expedition is the pinnacle of achievement for serious outdoor enthusiasts.',
+                    highlights: ['Highest US peak (Lower 48)', 'Alpine lakes', 'Guitar Lake camp', '360° summit panorama']
+                },
+            ],
+
+            users: [
+                { id: 1, username: 'admin', password: 'admin123', email: 'admin@trailbuddy.com', role: 'Employee', firstName: 'Alex', lastName: 'Admin', phone: '555-0001', createdAt: new Date('2024-01-01') },
+                { id: 2, username: 'hiker123', password: 'password123', email: 'hiker@example.com', role: 'Customer', firstName: 'Jamie', lastName: 'Smith', phone: '555-0002', createdAt: new Date('2024-03-15') },
+            ],
+
+            reservations: [
+                { id: 2001, userId: 2, tripId: 1, tripName: 'Appalachian Trail Day Hike', firstName: 'Jamie', lastName: 'Smith', email: 'hiker@example.com', phone: '555-0002', date: '2025-05-15', participants: 2, total: '90.00', status: 'Confirmed', notes: '' },
+                { id: 2002, userId: 2, tripId: 5, tripName: 'Smoky Mountains Wildflower Walk', firstName: 'Jamie', lastName: 'Smith', email: 'hiker@example.com', phone: '555-0002', date: '2025-05-10', participants: 1, total: '35.00', status: 'Pending', notes: 'Mild pollen allergy' },
+            ],
+
+            nextTripId: 9,
+            nextResId: 2003,
+        };
+    },
+
+    computed: {
+        filteredTrips() {
+            let list = this.trips.filter(t => {
+                const kw = this.search.keyword.toLowerCase();
+                const ok1 = !kw || t.name.toLowerCase().includes(kw) || t.location.toLowerCase().includes(kw) || t.description.toLowerCase().includes(kw);
+                const ok2 = !this.search.difficulty || t.difficulty === this.search.difficulty;
+                const ok3 = !this.search.maxPrice || t.price <= Number(this.search.maxPrice);
+                return ok1 && ok2 && ok3;
+            });
+            if (this.search.sort === 'price_asc') list.sort((a,b) => a.price - b.price);
+            else if (this.search.sort === 'price_desc') list.sort((a,b) => b.price - a.price);
+            else if (this.search.sort === 'difficulty') list.sort((a,b) => ['Easy','Moderate','Hard'].indexOf(a.difficulty) - ['Easy','Moderate','Hard'].indexOf(b.difficulty));
+            else list.sort((a,b) => a.name.localeCompare(b.name));
+            return list;
+        },
+        selectedTrip() {
+            return this.trips.find(t => t.id === this.tripIdParam) || null;
+        },
+        myReservations() {
+            if (!this.currentUser) return [];
+            return this.reservations.filter(r => r.userId === this.currentUser.id);
+        },
+        filteredEmpRes() {
+            return this.reservations.filter(r => {
+                const kw = this.empSearch.toLowerCase();
+                const ok1 = !kw || [r.firstName, r.lastName, r.email, r.tripName].some(v => v.toLowerCase().includes(kw));
+                const ok2 = !this.empStatusFilter || r.status === this.empStatusFilter;
+                return ok1 && ok2;
+            });
+        },
+        totalRevenue() {
+            return this.reservations.filter(r => r.status !== 'Cancelled').reduce((s, r) => s + parseFloat(r.total), 0).toFixed(0);
+        },
+        todayStr() {
+            return new Date().toISOString().split('T')[0];
+        },
+    },
+
+    methods: {
+        go(path) {
+            window.scrollTo(0, 0);
+            if (path === '/') { this.page = 'home'; return; }
+            if (path === '/trips') { this.page = 'trips'; return; }
+            if (path.startsWith('/trips/') && !path.includes('edit')) {
+                this.tripIdParam = parseInt(path.split('/')[2]);
+                this.page = 'tripDetail'; return;
+            }
+            if (path.startsWith('/reserve/')) {
+                this.tripIdParam = parseInt(path.split('/')[2]);
+                const trip = this.trips.find(t => t.id === this.tripIdParam);
+                if (trip && this.currentUser) {
+                    this.resForm = { firstName: this.currentUser.firstName, lastName: this.currentUser.lastName, email: this.currentUser.email, phone: this.currentUser.phone || '', date: trip.nextDate, participants: 1, notes: '' };
+                }
+                this.page = 'reserve'; return;
+            }
+            if (path === '/confirmation') { this.page = 'confirmation'; return; }
+            if (path === '/my-reservations') {
+                if (!this.currentUser) { this.go('/login'); return; }
+                this.page = 'myres'; return;
+            }
+            if (path === '/login') { this.loginErr = ''; this.page = 'login'; return; }
+            if (path === '/register') { this.regErr = ''; this.page = 'register'; return; }
+            if (path === '/profile') {
+                if (!this.currentUser) { this.go('/login'); return; }
+                this.profForm = { firstName: this.currentUser.firstName, lastName: this.currentUser.lastName, email: this.currentUser.email, phone: this.currentUser.phone || '' };
+                this.page = 'profile'; return;
+            }
+            if (path === '/employee') {
+                if (!this.currentUser || this.currentUser.role !== 'Employee') { this.go('/login'); return; }
+                this.page = 'empDash'; return;
+            }
+            if (path === '/employee/trips') { this.page = 'empTrips'; return; }
+            if (path === '/employee/reservations') { this.page = 'empRes'; return; }
+            this.page = '404';
+        },
+        viewTrip(id) { this.go('/trips/' + id); },
+        flash(msg, type = 'success') {
+            this.alert = { show: true, type, message: msg };
+            setTimeout(() => this.alert.show = false, 4000);
+        },
+        fmtDate(d) {
+            if (!d) return '';
+            return new Date(d).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+        },
+        tripImg(id) {
+            const t = this.trips.find(t => t.id === id);
+            return t ? t.imageUrl : '';
+        },
+        clearSearch() {
+            this.search = { keyword: '', difficulty: '', maxPrice: '', sort: 'name' };
+        },
+        scrollToAbout() {
+            document.getElementById('about')?.scrollIntoView({ behavior: 'smooth' });
+        },
+
+        // Auth
+        login() {
+            const u = this.users.find(u => u.username === this.loginForm.username && u.password === this.loginForm.password);
+            if (u) {
+                this.currentUser = u;
+                this.loginErr = '';
+                this.loginForm = { username: '', password: '' };
+                this.go(u.role === 'Employee' ? '/employee' : '/');
+                this.flash(`Welcome back, ${u.firstName}!`);
+            } else {
+                this.loginErr = 'Invalid username or password.';
+            }
+        },
+        logout() {
+            this.currentUser = null;
+            this.go('/');
+            this.flash('You have been signed out.', 'info');
+        },
+        register() {
+            if (this.users.find(u => u.username === this.regForm.username)) { this.regErr = 'Username already taken.'; return; }
+            if (this.users.find(u => u.email === this.regForm.email)) { this.regErr = 'Email already registered.'; return; }
+            const newUser = { id: this.users.length + 1, role: 'Customer', createdAt: new Date(), ...this.regForm };
+            this.users.push(newUser);
+            this.currentUser = newUser;
+            this.regErr = '';
+            this.go('/');
+            this.flash(`Welcome to TrailBuddy, ${newUser.firstName}!`);
+        },
+        saveProfile() {
+            Object.assign(this.currentUser, this.profForm);
+            this.flash('Profile updated successfully!');
+        },
+
+        // Reservations
+        submitReservation() {
+            const trip = this.selectedTrip;
+            if (!trip || trip.spotsLeft < this.resForm.participants) return;
+            const res = {
+                id: this.nextResId++,
+                userId: this.currentUser.id,
+                tripId: trip.id,
+                tripName: trip.name,
+                ...this.resForm,
+                total: (trip.price * this.resForm.participants).toFixed(2),
+                status: 'Pending',
+            };
+            this.reservations.push(res);
+            trip.spotsLeft -= this.resForm.participants;
+            this.lastRes = res;
+            this.go('/confirmation');
+        },
+        cancelRes(id) {
+            if (!confirm('Cancel this reservation?')) return;
+            const res = this.reservations.find(r => r.id === id);
+            if (res) {
+                res.status = 'Cancelled';
+                const trip = this.trips.find(t => t.id === res.tripId);
+                if (trip) trip.spotsLeft += res.participants;
+                this.flash('Reservation cancelled.', 'warning');
+            }
+        },
+
+        // Trips CRUD
+        openTripModal(trip) {
+            if (trip) {
+                this.tripModalMode = 'edit';
+                this.editingTripId = trip.id;
+                this.tripForm = { name: trip.name, location: trip.location, guide: trip.guide, difficulty: trip.difficulty, duration: trip.duration, price: trip.price, maxParticipants: trip.maxParticipants, nextDate: trip.nextDate, imageUrl: trip.imageUrl || '', description: trip.description };
+            } else {
+                this.tripModalMode = 'create';
+                this.editingTripId = null;
+                this.tripForm = { name: '', location: '', guide: '', difficulty: 'Moderate', duration: '', price: 0, maxParticipants: 12, nextDate: '', imageUrl: '', description: '' };
+            }
+            new bootstrap.Modal(document.getElementById('tripModal')).show();
+        },
+        saveTripModal() {
+            if (this.tripModalMode === 'create') {
+                this.trips.push({ id: this.nextTripId++, spotsLeft: this.tripForm.maxParticipants, reviewCount: 0, highlights: [], ...this.tripForm });
+                this.flash('Trip added successfully!');
+            } else {
+                const idx = this.trips.findIndex(t => t.id === this.editingTripId);
+                if (idx !== -1) Object.assign(this.trips[idx], this.tripForm);
+                this.flash('Trip updated successfully!');
+            }
+            bootstrap.Modal.getInstance(document.getElementById('tripModal')).hide();
+        },
+        deleteTrip(id) {
+            if (!confirm('Delete this trip? This cannot be undone.')) return;
+            this.trips = this.trips.filter(t => t.id !== id);
+            this.flash('Trip deleted.', 'warning');
+        },
+    },
+}).mount('#app');
+</script>
+</body>
+</html>
