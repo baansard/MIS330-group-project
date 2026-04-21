@@ -155,11 +155,11 @@
                                 <h5 class="card-title mb-0">{{ trip.name }}</h5>
                                 <span class="badge ms-2" :class="'badge-' + trip.difficulty.toLowerCase()">{{ trip.difficulty }}</span>
                             </div>
-                            <p class="text-muted small mb-2"><i class="bi bi-geo-alt me-1"></i>{{ trip.location }}</p>
+                            <p class="text-muted small mb-2"><i class="bi bi-geo-alt me-1"></i>{{ trip.city }}, {{ trip.state }}</p>
                             <p class="card-text small text-muted">{{ trip.description.slice(0, 100) }}...</p>
                             <div class="d-flex justify-content-between align-items-center mt-3">
                                 <span class="fw-bold fs-5" style="color:var(--tb-green)">${{ trip.price }}</span>
-                                <small class="text-muted"><i class="bi bi-clock me-1"></i>{{ trip.duration }}</small>
+                                <small class="text-muted"><i class="bi bi-clock me-1"></i>{{ trip.lengthHours }} hour(s)</small>
                             </div>
                         </div>
                     </div>
@@ -266,19 +266,19 @@
                             <h5 class="card-title mb-0">{{ trip.name }}</h5>
                             <span class="badge ms-2" :class="'badge-' + trip.difficulty.toLowerCase()">{{ trip.difficulty }}</span>
                         </div>
-                        <p class="text-muted small mb-1"><i class="bi bi-geo-alt me-1"></i>{{ trip.location }}</p>
-                        <p class="text-muted small mb-2"><i class="bi bi-clock me-1"></i>{{ trip.duration }}&nbsp;&nbsp;<i class="bi bi-people me-1"></i>Max {{ trip.maxParticipants }}</p>
+                        <p class="text-muted small mb-1"><i class="bi bi-geo-alt me-1"></i>{{ trip.city }}, {{ trip.state }}</p>
+                        <p class="text-muted small mb-2"><i class="bi bi-clock me-1"></i>{{ trip.lengthHours }} hour(s)&nbsp;&nbsp;<i class="bi bi-people me-1"></i>Max {{ trip.maxParticipants }}</p>
                         <p class="card-text small text-muted">{{ trip.description.slice(0, 90) }}...</p>
                         <div class="d-flex justify-content-between align-items-center mt-3">
                             <span class="fw-bold fs-5" style="color:var(--tb-green)">${{ trip.price }}</span>
-                            <span class="badge" :class="trip.spotsLeft > 0 ? 'bg-success' : 'bg-danger'">
-                                {{ trip.spotsLeft > 0 ? trip.spotsLeft + ' spots left' : 'Full' }}
+                            <span class="badge" :class="spotsLeftForTrip(trip.id) > 0 ? 'bg-success' : 'bg-danger'">
+                                {{ spotsLeftForTrip(trip.id) > 0 ? spotsLeftForTrip(trip.id) + ' spots left' : 'Full' }}
                             </span>
                         </div>
                     </div>
                     <div class="card-footer bg-white border-0 pb-3 pt-0">
-                        <button class="btn w-100" :class="trip.spotsLeft > 0 ? 'btn-primary' : 'btn-secondary'" :disabled="trip.spotsLeft === 0" @click.stop="viewTrip(trip.id)">
-                            {{ trip.spotsLeft > 0 ? 'View & Reserve' : 'Fully Booked' }}
+                        <button class="btn w-100" :class="spotsLeftForTrip(trip.id) > 0 ? 'btn-primary' : 'btn-secondary'" :disabled="spotsLeftForTrip(trip.id) === 0" @click.stop="viewTrip(trip.id)">
+                            {{ spotsLeftForTrip(trip.id) > 0 ? 'View & Reserve' : 'Fully Booked' }}
                         </button>
                     </div>
                 </div>
@@ -307,8 +307,8 @@
                 <h2 class="fw-bold">{{ selectedTrip.name }}</h2>
                 <div class="d-flex flex-wrap gap-2 mb-3">
                     <span class="badge fs-6 px-3 py-2" :class="'badge-' + selectedTrip.difficulty.toLowerCase()">{{ selectedTrip.difficulty }}</span>
-                    <span class="badge bg-secondary fs-6 px-3 py-2"><i class="bi bi-clock me-1"></i>{{ selectedTrip.duration }}</span>
-                    <span class="badge bg-info text-dark fs-6 px-3 py-2"><i class="bi bi-geo-alt me-1"></i>{{ selectedTrip.location }}</span>
+                    <span class="badge bg-secondary fs-6 px-3 py-2"><i class="bi bi-clock me-1"></i>{{ selectedTrip.lengthHours }} hour(s)</span>
+                    <span class="badge bg-info text-dark fs-6 px-3 py-2"><i class="bi bi-geo-alt me-1"></i>{{ selectedTrip.city }}, {{ selectedTrip.state }}</span>
                 </div>
                 <p class="lead text-muted">{{ selectedTrip.description }}</p>
                 <hr>
@@ -332,14 +332,14 @@
                         <h3 class="fw-bold mb-0" style="color:var(--tb-green)">${{ selectedTrip.price }}<small class="fs-6 text-muted fw-normal"> / person</small></h3>
                         <p class="text-muted small mb-3">⭐ 4.9 &middot; {{ selectedTrip.reviewCount }} reviews</p>
                         <table class="table table-sm table-borderless mb-3">
-                            <tr><td class="text-muted ps-0">Guide</td><td class="fw-semibold">{{ selectedTrip.guide }}</td></tr>
-                            <tr><td class="text-muted ps-0">Duration</td><td>{{ selectedTrip.duration }}</td></tr>
+                            <tr><td class="text-muted ps-0">Guide</td><td class="fw-semibold">{{ employeeNameById(selectedTrip.empid) }}</td></tr>
+                            <tr><td class="text-muted ps-0">Duration</td><td>{{ selectedTrip.lengthHours }} hour(s)</td></tr>
                             <tr><td class="text-muted ps-0">Difficulty</td><td>{{ selectedTrip.difficulty }}</td></tr>
                             <tr><td class="text-muted ps-0">Group Size</td><td>Max {{ selectedTrip.maxParticipants }}</td></tr>
-                            <tr><td class="text-muted ps-0">Availability</td><td>{{ selectedTrip.spotsLeft }} spots left</td></tr>
+                            <tr><td class="text-muted ps-0">Availability</td><td>{{ spotsLeftForTrip(selectedTrip.id) }} spots left</td></tr>
                             <tr><td class="text-muted ps-0">Next Date</td><td>{{ fmtDate(selectedTrip.nextDate) }}</td></tr>
                         </table>
-                        <template v-if="selectedTrip.spotsLeft > 0">
+                        <template v-if="spotsLeftForTrip(selectedTrip.id) > 0">
                             <button v-if="currentUser && currentUser.role === 'Customer'" class="btn btn-primary w-100 btn-lg mb-2" @click="go('/reserve/' + selectedTrip.id)">
                                 <i class="bi bi-calendar-check me-2"></i>Reserve This Trip
                             </button>
@@ -375,7 +375,7 @@
                             <img :src="selectedTrip.imageUrl" style="width:80px;height:60px;object-fit:cover;border-radius:8px" class="me-3 flex-shrink-0">
                             <div>
                                 <h6 class="fw-bold mb-0">{{ selectedTrip.name }}</h6>
-                                <small class="text-muted">{{ selectedTrip.location }} &middot; {{ selectedTrip.duration }} &middot; ${{ selectedTrip.price }}/person</small>
+                                <small class="text-muted">{{ selectedTrip.city }}, {{ selectedTrip.state }} &middot; {{ selectedTrip.lengthHours }} hour(s) &middot; ${{ selectedTrip.price }}/person</small>
                             </div>
                         </div>
                         <h5 class="fw-bold mb-3">Reservation Details</h5>
@@ -404,7 +404,7 @@
                                 <div class="col-md-6">
                                     <label class="form-label fw-semibold">Participants</label>
                                     <select class="form-select" v-model.number="resForm.participants">
-                                        <option v-for="n in Math.min(selectedTrip.spotsLeft, 8)" :value="n">{{ n }}</option>
+                                        <option v-for="n in Math.min(spotsLeftForTrip(selectedTrip.id), 8)" :value="n">{{ n }}</option>
                                     </select>
                                 </div>
                                 <div class="col-12">
@@ -444,7 +444,7 @@
                     <h2 class="fw-bold mt-3 mb-1">Reservation Confirmed!</h2>
                     <p class="text-muted">Booking Reference: <strong>#{{ lastRes ? lastRes.id : '' }}</strong></p>
                     <div class="alert alert-success text-start mt-2" v-if="lastRes">
-                        <strong>{{ lastRes.tripName }}</strong><br>
+                        <strong>{{ reservationTripName(lastRes.id) }}</strong><br>
                         <small><i class="bi bi-calendar me-1"></i>{{ fmtDate(lastRes.date) }}</small><br>
                         <small><i class="bi bi-people me-1"></i>{{ lastRes.participants }} participant(s) &middot; <strong>Total: ${{ lastRes.total }}</strong></small>
                     </div>
@@ -478,23 +478,24 @@
                                 <img :src="tripImg(res.tripId)" style="width:100%;height:60px;object-fit:cover;border-radius:6px">
                             </div>
                             <div class="col-md-5">
-                                <h6 class="fw-bold mb-0">{{ res.tripName }}</h6>
+                                <h6 class="fw-bold mb-0">{{ reservationTripName(res.id) }}</h6>
                                 <small class="text-muted">
                                     <i class="bi bi-calendar me-1"></i>{{ fmtDate(res.date) }} &nbsp;·&nbsp;
+                                    <i class="bi bi-clock-history me-1"></i>{{ fmtDate(res.reservationDate) }} &nbsp;·&nbsp;
                                     <i class="bi bi-people me-1"></i>{{ res.participants }} participant(s)
                                 </small>
                             </div>
                             <div class="col-md-2 text-center">
                                 <span class="badge fs-6" :class="{
-                                    'bg-warning text-dark': res.status === 'Pending',
-                                    'bg-success': res.status === 'Confirmed',
-                                    'bg-danger': res.status === 'Cancelled',
-                                    'bg-secondary': res.status === 'Completed'
-                                }">{{ res.status }}</span>
+                                    'bg-warning text-dark': res.reservationStatus === 'Pending',
+                                    'bg-success': res.reservationStatus === 'Confirmed',
+                                    'bg-danger': res.reservationStatus === 'Cancelled',
+                                    'bg-secondary': res.reservationStatus === 'Completed'
+                                }">{{ res.reservationStatus }}</span>
                             </div>
                             <div class="col-md-2 text-center fw-bold" style="color:var(--tb-green)">${{ res.total }}</div>
                             <div class="col-md-2 text-end">
-                                <button v-if="res.status === 'Pending' || res.status === 'Confirmed'"
+                                <button v-if="res.reservationStatus === 'Pending' || res.reservationStatus === 'Confirmed'"
                                     class="btn btn-sm btn-outline-danger"
                                     @click="cancelRes(res.id)">
                                     <i class="bi bi-x-circle me-1"></i>Cancel
@@ -542,7 +543,7 @@
                                     <button type="button" class="btn btn-outline-secondary btn-sm flex-fill" @click="loginForm={username:'hiker123',password:'password123'}">
                                         <i class="bi bi-person me-1"></i>Customer
                                     </button>
-                                    <button type="button" class="btn btn-outline-secondary btn-sm flex-fill" @click="loginForm={username:'admin',password:'admin123'}">
+                                    <button type="button" class="btn btn-outline-secondary btn-sm flex-fill" @click="loginForm={username:'JaneSmith1',password:'Buttercup'}">
                                         <i class="bi bi-person-badge me-1"></i>Employee
                                     </button>
                                 </div>
@@ -695,7 +696,7 @@
                 <div class="col-md-3">
                     <div class="card border-0 shadow-sm stat-card p-3">
                         <p class="text-muted small mb-1">Pending</p>
-                        <h2 class="fw-bold mb-0">{{ reservations.filter(r=>r.status==='Pending').length }}</h2>
+                        <h2 class="fw-bold mb-0">{{ reservations.filter(r=>r.reservationStatus==='Pending').length }}</h2>
                     </div>
                 </div>
                 <div class="col-md-3">
@@ -710,21 +711,22 @@
                     <h6 class="fw-bold mb-3">Recent Reservations</h6>
                     <table class="table table-hover align-middle mb-0">
                         <thead class="table-light">
-                            <tr><th>#</th><th>Customer</th><th>Trip</th><th>Date</th><th>Status</th><th>Total</th></tr>
+                            <tr><th>#</th><th>Customer</th><th>Trip</th><th>Trip Date</th><th>Reserved On</th><th>Status</th><th>Total</th></tr>
                         </thead>
                         <tbody>
                             <tr v-for="res in reservations.slice(-5).reverse()" :key="res.id">
                                 <td class="text-muted">#{{ res.id }}</td>
                                 <td>{{ res.firstName }} {{ res.lastName }}</td>
-                                <td>{{ res.tripName }}</td>
+                                <td>{{ reservationTripName(res.id) }}</td>
                                 <td>{{ fmtDate(res.date) }}</td>
+                                <td>{{ fmtDate(res.reservationDate) }}</td>
                                 <td>
                                     <span class="badge" :class="{
-                                        'bg-warning text-dark': res.status==='Pending',
-                                        'bg-success': res.status==='Confirmed',
-                                        'bg-danger': res.status==='Cancelled',
-                                        'bg-secondary': res.status==='Completed'
-                                    }">{{ res.status }}</span>
+                                        'bg-warning text-dark': res.reservationStatus==='Pending',
+                                        'bg-success': res.reservationStatus==='Confirmed',
+                                        'bg-danger': res.reservationStatus==='Cancelled',
+                                        'bg-secondary': res.reservationStatus==='Completed'
+                                    }">{{ res.reservationStatus }}</span>
                                 </td>
                                 <td>${{ res.total }}</td>
                             </tr>
@@ -746,16 +748,16 @@
                 <div class="table-responsive">
                     <table class="table table-hover align-middle mb-0">
                         <thead class="table-light">
-                            <tr><th>Trip Name</th><th>Difficulty</th><th>Duration</th><th>Price</th><th>Spots</th><th>Status</th><th>Actions</th></tr>
+                            <tr><th>Trip Name</th><th>Guide</th><th>Duration</th><th>Price</th><th>Spots</th><th>Status</th><th>Actions</th></tr>
                         </thead>
                         <tbody>
                             <tr v-for="trip in trips" :key="trip.id">
                                 <td class="fw-semibold">{{ trip.name }}</td>
-                                <td><span class="badge" :class="'badge-' + trip.difficulty.toLowerCase()">{{ trip.difficulty }}</span></td>
-                                <td>{{ trip.duration }}</td>
+                                <td>{{ employeeNameById(trip.empid) }}</td>
+                                <td>{{ trip.lengthHours }} hour(s)</td>
                                 <td>${{ trip.price }}</td>
-                                <td>{{ trip.spotsLeft }} / {{ trip.maxParticipants }}</td>
-                                <td><span class="badge" :class="trip.spotsLeft > 0 ? 'bg-success' : 'bg-danger'">{{ trip.spotsLeft > 0 ? 'Available' : 'Full' }}</span></td>
+                                <td>{{ spotsLeftForTrip(trip.id) }} / {{ trip.maxParticipants }}</td>
+                                <td><span class="badge" :class="spotsLeftForTrip(trip.id) > 0 ? 'bg-success' : 'bg-danger'">{{ spotsLeftForTrip(trip.id) > 0 ? 'Available' : 'Full' }}</span></td>
                                 <td>
                                     <button class="btn btn-sm btn-outline-primary me-1" @click="openTripModal(trip)"><i class="bi bi-pencil"></i></button>
                                     <button class="btn btn-sm btn-outline-danger" @click="deleteTrip(trip.id)"><i class="bi bi-trash"></i></button>
@@ -786,26 +788,27 @@
                 <div class="table-responsive">
                     <table class="table table-hover align-middle mb-0">
                         <thead class="table-light">
-                            <tr><th>#</th><th>Customer</th><th>Trip</th><th>Date</th><th>Pax</th><th>Total</th><th>Status</th><th>Update</th></tr>
+                            <tr><th>#</th><th>Customer</th><th>Trip</th><th>Trip Date</th><th>Reserved On</th><th>Pax</th><th>Total</th><th>Status</th><th>Update</th></tr>
                         </thead>
                         <tbody>
                             <tr v-for="res in filteredEmpRes" :key="res.id">
                                 <td class="text-muted">#{{ res.id }}</td>
                                 <td>{{ res.firstName }} {{ res.lastName }}<br><small class="text-muted">{{ res.email }}</small></td>
-                                <td>{{ res.tripName }}</td>
+                                <td>{{ reservationTripName(res.id) }}</td>
                                 <td>{{ fmtDate(res.date) }}</td>
+                                <td>{{ fmtDate(res.reservationDate) }}</td>
                                 <td class="text-center">{{ res.participants }}</td>
                                 <td>${{ res.total }}</td>
                                 <td>
                                     <span class="badge" :class="{
-                                        'bg-warning text-dark': res.status==='Pending',
-                                        'bg-success': res.status==='Confirmed',
-                                        'bg-danger': res.status==='Cancelled',
-                                        'bg-secondary': res.status==='Completed'
-                                    }">{{ res.status }}</span>
+                                        'bg-warning text-dark': res.reservationStatus==='Pending',
+                                        'bg-success': res.reservationStatus==='Confirmed',
+                                        'bg-danger': res.reservationStatus==='Cancelled',
+                                        'bg-secondary': res.reservationStatus==='Completed'
+                                    }">{{ res.reservationStatus }}</span>
                                 </td>
                                 <td>
-                                    <select class="form-select form-select-sm" style="width:130px" v-model="res.status" @change="flash('Reservation #' + res.id + ' updated.')">
+                                    <select class="form-select form-select-sm" style="width:130px" v-model="res.reservationStatus" @change="flash('Reservation #' + res.id + ' updated.')">
                                         <option>Pending</option>
                                         <option>Confirmed</option>
                                         <option>Cancelled</option>
@@ -814,7 +817,7 @@
                                 </td>
                             </tr>
                             <tr v-if="!filteredEmpRes.length">
-                                <td colspan="8" class="text-center text-muted py-4">No reservations found.</td>
+                                <td colspan="9" class="text-center text-muted py-4">No reservations found.</td>
                             </tr>
                         </tbody>
                     </table>
@@ -853,28 +856,51 @@
                                 <input type="text" class="form-control" v-model="tripForm.name" required>
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label fw-semibold">Location *</label>
-                                <input type="text" class="form-control" v-model="tripForm.location" required>
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label fw-semibold">Guide Name *</label>
-                                <input type="text" class="form-control" v-model="tripForm.guide" required>
-                            </div>
-                            <div class="col-md-4">
-                                <label class="form-label fw-semibold">Difficulty</label>
-                                <select class="form-select" v-model="tripForm.difficulty">
-                                    <option>Easy</option>
-                                    <option>Moderate</option>
-                                    <option>Hard</option>
+                                <label class="form-label fw-semibold">Guide *</label>
+                                <select class="form-select" v-model.number="tripForm.empid" required>
+                                    <option :value="null" disabled>Select guide</option>
+                                    <option v-for="emp in employees" :key="emp.id" :value="emp.id">{{ emp.firstName }} {{ emp.lastName }}</option>
                                 </select>
                             </div>
-                            <div class="col-md-4">
-                                <label class="form-label fw-semibold">Duration *</label>
-                                <input type="text" class="form-control" v-model="tripForm.duration" placeholder="e.g. 6 hours" required>
-                            </div>
-                            <div class="col-md-4">
+                            <div class="col-md-6">
                                 <label class="form-label fw-semibold">Price ($) *</label>
                                 <input type="number" class="form-control" v-model.number="tripForm.price" min="1" required>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label fw-semibold">Street *</label>
+                                <input type="text" class="form-control" v-model="tripForm.street" required>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label fw-semibold">City *</label>
+                                <input type="text" class="form-control" v-model="tripForm.city" required>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label fw-semibold">State *</label>
+                                <input type="text" class="form-control" v-model="tripForm.state" maxlength="2" required>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label fw-semibold">Zip *</label>
+                                <input type="text" class="form-control" v-model="tripForm.zip" maxlength="5" required>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold">Length (hours) *</label>
+                                <input type="number" class="form-control" v-model.number="tripForm.lengthHours" min="1" required>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold">Distance (miles) *</label>
+                                <input type="number" class="form-control" v-model.number="tripForm.distanceMiles" min="0" required>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold">Trip Status *</label>
+                                <select class="form-select" v-model="tripForm.tripStatus" required>
+                                    <option>Scheduled</option>
+                                    <option>Completed</option>
+                                    <option>Cancelled</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Start Time *</label>
+                                <input type="time" class="form-control" v-model="tripForm.startTime" required>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">Max Participants *</label>
@@ -961,17 +987,23 @@ createApp({
             regErr: '',
             resForm: { firstName: '', lastName: '', email: '', phone: '', date: '', participants: 1, notes: '' },
             profForm: { firstName: '', lastName: '', email: '', phone: '' },
-            tripForm: { name: '', location: '', guide: '', difficulty: 'Moderate', duration: '', price: 0, maxParticipants: 12, nextDate: '', imageUrl: '', description: '' },
+            tripForm: { name: '', empid: null, street: '', city: '', state: '', zip: '', lengthHours: 1, distanceMiles: 0, tripStatus: 'Scheduled', startTime: '08:00', price: 0, maxParticipants: 12, nextDate: '', imageUrl: '', description: '' },
             tripModalMode: 'create',
             editingTripId: null,
 
             // ---- MOCK DATA ----
+            employees: [
+                { id: 11111, firstName: 'Jane', lastName: 'Smith', username: 'JaneSmith1', password: 'Buttercup', email: 'JaneSmith1@gmail.com', phone: '555-444-3333', role: 'Employee' },
+                { id: 11112, firstName: 'Daphne', lastName: 'Johnson', username: 'DJohnson', password: 'employeePassword', email: 'DJ@gmail.com', phone: '555-888-9999', role: 'Employee' },
+                { id: 11113, firstName: 'Joe', lastName: 'Johnson', username: 'JJohnson1', password: 'Password', email: 'JJohnson@hotmail.com', phone: '555-777-8888', role: 'Employee' },
+                { id: 11114, firstName: 'Fred', lastName: 'Jones', username: 'Freddy1Jones', password: 'Scooby', email: 'Freddy1@aol.com', phone: '555-666-7777', role: 'Employee' },
+            ],
             trips: [
                 {
                     id: 1, name: 'Appalachian Trail Day Hike',
-                    location: 'Blue Ridge Mountains, VA', guide: 'Sarah Mitchell',
-                    difficulty: 'Easy', duration: '4 hours', price: 45,
-                    maxParticipants: 12, spotsLeft: 5, reviewCount: 48,
+                    empid: 11111, street: '100 Skyline Dr', city: 'Waynesboro', state: 'VA', zip: '22980',
+                    difficulty: 'Easy', lengthHours: 4, distanceMiles: 6, tripStatus: 'Scheduled', startTime: '08:00', price: 45,
+                    maxParticipants: 12, reviewCount: 48,
                     nextDate: '2025-05-15',
                     imageUrl: 'https://images.unsplash.com/photo-1551632811-561732d1e306?w=600',
                     description: 'A scenic and peaceful hike through the ancient Appalachian Mountains. Perfect for beginners and families, this trail offers stunning mountain views, lush forests, and the chance to spot local wildlife.',
@@ -979,9 +1011,9 @@ createApp({
                 },
                 {
                     id: 2, name: 'Rocky Mountain Summit Challenge',
-                    location: 'Rocky Mountain NP, CO', guide: 'Jake Thornton',
-                    difficulty: 'Hard', duration: '8 hours', price: 120,
-                    maxParticipants: 8, spotsLeft: 3, reviewCount: 32,
+                    empid: 11112, street: '1000 US-36', city: 'Estes Park', state: 'CO', zip: '80517',
+                    difficulty: 'Hard', lengthHours: 8, distanceMiles: 10, tripStatus: 'Scheduled', startTime: '06:30', price: 120,
+                    maxParticipants: 8, reviewCount: 32,
                     nextDate: '2025-06-01',
                     imageUrl: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=600',
                     description: 'Conquer one of Colorado\'s most breathtaking peaks with our expert mountaineering guide. This demanding climb rewards you with 360-degree panoramic views and an unforgettable achievement.',
@@ -989,9 +1021,9 @@ createApp({
                 },
                 {
                     id: 3, name: 'Cascade Waterfall Loop',
-                    location: 'Columbia River Gorge, OR', guide: 'Emma Chen',
-                    difficulty: 'Moderate', duration: '6 hours', price: 75,
-                    maxParticipants: 10, spotsLeft: 8, reviewCount: 61,
+                    empid: 11113, street: '53000 Historic Columbia River Hwy', city: 'Corbett', state: 'OR', zip: '97019',
+                    difficulty: 'Moderate', lengthHours: 6, distanceMiles: 7, tripStatus: 'Scheduled', startTime: '09:00', price: 75,
+                    maxParticipants: 10, reviewCount: 61,
                     nextDate: '2025-05-22',
                     imageUrl: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=600',
                     description: 'Explore the stunning Columbia River Gorge and discover a series of magnificent waterfalls. This moderate loop winds through ancient fir forests and offers spectacular gorge overlooks.',
@@ -999,9 +1031,9 @@ createApp({
                 },
                 {
                     id: 4, name: 'Grand Canyon Rim to River',
-                    location: 'Grand Canyon NP, AZ', guide: 'Marcus Rivera',
-                    difficulty: 'Hard', duration: '2 days', price: 250,
-                    maxParticipants: 6, spotsLeft: 2, reviewCount: 24,
+                    empid: 11114, street: 'S Entrance Rd', city: 'Grand Canyon', state: 'AZ', zip: '86023',
+                    difficulty: 'Hard', lengthHours: 16, distanceMiles: 15, tripStatus: 'Scheduled', startTime: '05:30', price: 250,
+                    maxParticipants: 6, reviewCount: 24,
                     nextDate: '2025-07-10',
                     imageUrl: 'https://images.unsplash.com/photo-1474044159687-1ee9f3a51722?w=600',
                     description: 'Embark on the ultimate Grand Canyon adventure, descending from the South Rim to the Colorado River and back. A physically demanding but life-changing multi-day journey into one of the world\'s great natural wonders.',
@@ -1009,9 +1041,9 @@ createApp({
                 },
                 {
                     id: 5, name: 'Smoky Mountains Wildflower Walk',
-                    location: 'Great Smoky Mountains, TN', guide: 'Linda Park',
-                    difficulty: 'Easy', duration: '3 hours', price: 35,
-                    maxParticipants: 15, spotsLeft: 10, reviewCount: 89,
+                    empid: 11111, street: '107 Park Headquarters Rd', city: 'Gatlinburg', state: 'TN', zip: '37738',
+                    difficulty: 'Easy', lengthHours: 3, distanceMiles: 4, tripStatus: 'Scheduled', startTime: '10:00', price: 35,
+                    maxParticipants: 15, reviewCount: 89,
                     nextDate: '2025-05-10',
                     imageUrl: 'https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?w=600',
                     description: 'A gentle and enchanting walk through the Great Smoky Mountains during peak wildflower season. Our botanist guide will help you identify over 50 species of native wildflowers in full bloom.',
@@ -1019,9 +1051,9 @@ createApp({
                 },
                 {
                     id: 6, name: 'Zion Narrows Adventure',
-                    location: 'Zion NP, UT', guide: 'Chris Bowen',
-                    difficulty: 'Moderate', duration: '7 hours', price: 95,
-                    maxParticipants: 10, spotsLeft: 0, reviewCount: 77,
+                    empid: 11112, street: '1 Zion Park Blvd', city: 'Springdale', state: 'UT', zip: '84767',
+                    difficulty: 'Moderate', lengthHours: 7, distanceMiles: 8, tripStatus: 'Scheduled', startTime: '07:30', price: 95,
+                    maxParticipants: 10, reviewCount: 77,
                     nextDate: '2025-06-15',
                     imageUrl: 'https://images.unsplash.com/photo-1542401886-65d6c61db217?w=600',
                     description: 'Wade through the famous Virgin River and hike through stunning slot canyons. Experience towering sandstone walls rising 1,000 feet above you in this iconic Utah adventure.',
@@ -1029,9 +1061,9 @@ createApp({
                 },
                 {
                     id: 7, name: 'Olympic Rain Forest Trek',
-                    location: 'Olympic NP, WA', guide: 'Nina Walsh',
-                    difficulty: 'Easy', duration: '4 hours', price: 55,
-                    maxParticipants: 12, spotsLeft: 7, reviewCount: 43,
+                    empid: 11113, street: '3002 Mt Angeles Rd', city: 'Port Angeles', state: 'WA', zip: '98362',
+                    difficulty: 'Easy', lengthHours: 4, distanceMiles: 5, tripStatus: 'Scheduled', startTime: '09:30', price: 55,
+                    maxParticipants: 12, reviewCount: 43,
                     nextDate: '2025-05-28',
                     imageUrl: 'https://images.unsplash.com/photo-1448375240586-882707db888b?w=600',
                     description: 'Step into a magical temperate rain forest draped in emerald moss and ancient trees. The Hoh Rain Forest receives up to 14 feet of rain per year, creating a lush, otherworldly landscape.',
@@ -1039,9 +1071,9 @@ createApp({
                 },
                 {
                     id: 8, name: 'Mount Whitney Expedition',
-                    location: 'Sierra Nevada, CA', guide: 'Dave Okafor',
-                    difficulty: 'Hard', duration: '3 days', price: 350,
-                    maxParticipants: 6, spotsLeft: 4, reviewCount: 18,
+                    empid: 11114, street: 'Whitney Portal Rd', city: 'Lone Pine', state: 'CA', zip: '93545',
+                    difficulty: 'Hard', lengthHours: 24, distanceMiles: 22, tripStatus: 'Scheduled', startTime: '05:00', price: 350,
+                    maxParticipants: 6, reviewCount: 18,
                     nextDate: '2025-08-01',
                     imageUrl: 'https://images.unsplash.com/photo-1486870591958-9b9d0d1dda99?w=600',
                     description: 'Stand on the highest point in the contiguous United States at 14,505 feet. This prestigious multi-day summit expedition is the pinnacle of achievement for serious outdoor enthusiasts.',
@@ -1050,13 +1082,24 @@ createApp({
             ],
 
             users: [
-                { id: 1, username: 'admin', password: 'admin123', email: 'admin@trailbuddy.com', role: 'Employee', firstName: 'Alex', lastName: 'Admin', phone: '555-0001', createdAt: new Date('2024-01-01') },
                 { id: 2, username: 'hiker123', password: 'password123', email: 'hiker@example.com', role: 'Customer', firstName: 'Jamie', lastName: 'Smith', phone: '555-0002', createdAt: new Date('2024-03-15') },
+                { id: 3, username: 'username1', password: 'password', email: 'email@email.com', role: 'Customer', firstName: 'Bob', lastName: 'Jones', phone: '255-555-5555', createdAt: new Date('2024-04-01') },
+                { id: 4, username: 'username2', password: 'password', email: 'email@hotmail.com', role: 'Customer', firstName: 'John', lastName: 'Smith', phone: '244-555-5555', createdAt: new Date('2024-04-01') },
+                { id: 5, username: 'JDoe1', password: 'password5', email: 'email@gmail.com', role: 'Customer', firstName: 'Jane', lastName: 'Doe', phone: '555-555-5555', createdAt: new Date('2024-04-01') },
+                { id: 6, username: 'JSchome1', password: 'password1234', email: 'JSchmoe@aol.com', role: 'Customer', firstName: 'Joe', lastName: 'Schmoe', phone: '444-555-5555', createdAt: new Date('2024-04-01') },
+                { id: 11111, username: 'JaneSmith1', password: 'Buttercup', email: 'JaneSmith1@gmail.com', role: 'Employee', firstName: 'Jane', lastName: 'Smith', phone: '555-444-3333', createdAt: new Date('2024-01-01') },
+                { id: 11112, username: 'DJohnson', password: 'employeePassword', email: 'DJ@gmail.com', role: 'Employee', firstName: 'Daphne', lastName: 'Johnson', phone: '555-888-9999', createdAt: new Date('2024-01-01') },
+                { id: 11113, username: 'JJohnson1', password: 'Password', email: 'JJohnson@hotmail.com', role: 'Employee', firstName: 'Joe', lastName: 'Johnson', phone: '555-777-8888', createdAt: new Date('2024-01-01') },
+                { id: 11114, username: 'Freddy1Jones', password: 'Scooby', email: 'Freddy1@aol.com', role: 'Employee', firstName: 'Fred', lastName: 'Jones', phone: '555-666-7777', createdAt: new Date('2024-01-01') },
             ],
 
             reservations: [
-                { id: 2001, userId: 2, tripId: 1, tripName: 'Appalachian Trail Day Hike', firstName: 'Jamie', lastName: 'Smith', email: 'hiker@example.com', phone: '555-0002', date: '2025-05-15', participants: 2, total: '90.00', status: 'Confirmed', notes: '' },
-                { id: 2002, userId: 2, tripId: 5, tripName: 'Smoky Mountains Wildflower Walk', firstName: 'Jamie', lastName: 'Smith', email: 'hiker@example.com', phone: '555-0002', date: '2025-05-10', participants: 1, total: '35.00', status: 'Pending', notes: 'Mild pollen allergy' },
+                { id: 2001, userId: 2, firstName: 'Jamie', lastName: 'Smith', email: 'hiker@example.com', phone: '555-0002', date: '2025-05-15', participants: 2, total: '90.00', reservationDate: '2025-04-15', reservationStatus: 'Confirmed', notes: '' },
+                { id: 2002, userId: 2, firstName: 'Jamie', lastName: 'Smith', email: 'hiker@example.com', phone: '555-0002', date: '2025-05-10', participants: 1, total: '35.00', reservationDate: '2025-04-17', reservationStatus: 'Pending', notes: 'Mild pollen allergy' },
+            ],
+            reservationTrips: [
+                { reservationId: 2001, tripId: 1 },
+                { reservationId: 2002, tripId: 5 },
             ],
 
             nextTripId: 9,
@@ -1068,7 +1111,7 @@ createApp({
         filteredTrips() {
             let list = this.trips.filter(t => {
                 const kw = this.search.keyword.toLowerCase();
-                const ok1 = !kw || t.name.toLowerCase().includes(kw) || t.location.toLowerCase().includes(kw) || t.description.toLowerCase().includes(kw);
+                const ok1 = !kw || t.name.toLowerCase().includes(kw) || t.city.toLowerCase().includes(kw) || t.state.toLowerCase().includes(kw) || t.description.toLowerCase().includes(kw);
                 const ok2 = !this.search.difficulty || t.difficulty === this.search.difficulty;
                 const ok3 = !this.search.maxPrice || t.price <= Number(this.search.maxPrice);
                 return ok1 && ok2 && ok3;
@@ -1089,13 +1132,14 @@ createApp({
         filteredEmpRes() {
             return this.reservations.filter(r => {
                 const kw = this.empSearch.toLowerCase();
-                const ok1 = !kw || [r.firstName, r.lastName, r.email, r.tripName].some(v => v.toLowerCase().includes(kw));
-                const ok2 = !this.empStatusFilter || r.status === this.empStatusFilter;
+                const tripName = this.reservationTripName(r.id);
+                const ok1 = !kw || [r.firstName, r.lastName, r.email, tripName].some(v => (v || '').toLowerCase().includes(kw));
+                const ok2 = !this.empStatusFilter || r.reservationStatus === this.empStatusFilter;
                 return ok1 && ok2;
             });
         },
         totalRevenue() {
-            return this.reservations.filter(r => r.status !== 'Cancelled').reduce((s, r) => s + parseFloat(r.total), 0).toFixed(0);
+            return this.reservations.filter(r => r.reservationStatus !== 'Cancelled').reduce((s, r) => s + parseFloat(r.total), 0).toFixed(0);
         },
         todayStr() {
             return new Date().toISOString().split('T')[0];
@@ -1152,6 +1196,27 @@ createApp({
             const t = this.trips.find(t => t.id === id);
             return t ? t.imageUrl : '';
         },
+        employeeNameById(empid) {
+            const emp = this.employees.find(e => e.id === empid);
+            return emp ? `${emp.firstName} ${emp.lastName}` : 'Unassigned';
+        },
+        tripIdsForReservation(reservationId) {
+            return this.reservationTrips.filter(rt => rt.reservationId === reservationId).map(rt => rt.tripId);
+        },
+        reservationTripName(reservationId) {
+            const tripId = this.tripIdsForReservation(reservationId)[0];
+            const trip = this.trips.find(t => t.id === tripId);
+            return trip ? trip.name : 'Unknown Trip';
+        },
+        spotsLeftForTrip(tripId) {
+            const trip = this.trips.find(t => t.id === tripId);
+            if (!trip) return 0;
+            const reserved = this.reservations
+                .filter(r => r.reservationStatus !== 'Cancelled')
+                .filter(r => this.tripIdsForReservation(r.id).includes(tripId))
+                .reduce((sum, r) => sum + Number(r.participants || 0), 0);
+            return Math.max(trip.maxParticipants - reserved, 0);
+        },
         clearSearch() {
             this.search = { keyword: '', difficulty: '', maxPrice: '', sort: 'name' };
         },
@@ -1195,18 +1260,17 @@ createApp({
         // Reservations
         submitReservation() {
             const trip = this.selectedTrip;
-            if (!trip || trip.spotsLeft < this.resForm.participants) return;
+            if (!trip || this.spotsLeftForTrip(trip.id) < this.resForm.participants) return;
             const res = {
                 id: this.nextResId++,
                 userId: this.currentUser.id,
-                tripId: trip.id,
-                tripName: trip.name,
                 ...this.resForm,
                 total: (trip.price * this.resForm.participants).toFixed(2),
-                status: 'Pending',
+                reservationDate: new Date().toISOString().split('T')[0],
+                reservationStatus: 'Pending',
             };
             this.reservations.push(res);
-            trip.spotsLeft -= this.resForm.participants;
+            this.reservationTrips.push({ reservationId: res.id, tripId: trip.id });
             this.lastRes = res;
             this.go('/confirmation');
         },
@@ -1214,9 +1278,7 @@ createApp({
             if (!confirm('Cancel this reservation?')) return;
             const res = this.reservations.find(r => r.id === id);
             if (res) {
-                res.status = 'Cancelled';
-                const trip = this.trips.find(t => t.id === res.tripId);
-                if (trip) trip.spotsLeft += res.participants;
+                res.reservationStatus = 'Cancelled';
                 this.flash('Reservation cancelled.', 'warning');
             }
         },
@@ -1226,17 +1288,17 @@ createApp({
             if (trip) {
                 this.tripModalMode = 'edit';
                 this.editingTripId = trip.id;
-                this.tripForm = { name: trip.name, location: trip.location, guide: trip.guide, difficulty: trip.difficulty, duration: trip.duration, price: trip.price, maxParticipants: trip.maxParticipants, nextDate: trip.nextDate, imageUrl: trip.imageUrl || '', description: trip.description };
+                this.tripForm = { name: trip.name, empid: trip.empid, street: trip.street, city: trip.city, state: trip.state, zip: trip.zip, lengthHours: trip.lengthHours, distanceMiles: trip.distanceMiles, tripStatus: trip.tripStatus, startTime: trip.startTime, price: trip.price, maxParticipants: trip.maxParticipants, nextDate: trip.nextDate, imageUrl: trip.imageUrl || '', description: trip.description, difficulty: trip.difficulty };
             } else {
                 this.tripModalMode = 'create';
                 this.editingTripId = null;
-                this.tripForm = { name: '', location: '', guide: '', difficulty: 'Moderate', duration: '', price: 0, maxParticipants: 12, nextDate: '', imageUrl: '', description: '' };
+                this.tripForm = { name: '', empid: null, street: '', city: '', state: '', zip: '', lengthHours: 1, distanceMiles: 0, tripStatus: 'Scheduled', startTime: '08:00', price: 0, maxParticipants: 12, nextDate: '', imageUrl: '', description: '', difficulty: 'Moderate' };
             }
             new bootstrap.Modal(document.getElementById('tripModal')).show();
         },
         saveTripModal() {
             if (this.tripModalMode === 'create') {
-                this.trips.push({ id: this.nextTripId++, spotsLeft: this.tripForm.maxParticipants, reviewCount: 0, highlights: [], ...this.tripForm });
+                this.trips.push({ id: this.nextTripId++, reviewCount: 0, highlights: [], ...this.tripForm });
                 this.flash('Trip added successfully!');
             } else {
                 const idx = this.trips.findIndex(t => t.id === this.editingTripId);
