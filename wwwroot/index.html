@@ -40,6 +40,7 @@
         .employee-sidebar .nav-link:hover, .employee-sidebar .nav-link.active { color: white; background: rgba(255,255,255,0.1); }
         .stat-card { border-left: 4px solid var(--tb-green); }
         [v-cloak] { display: none; }
+        .spinner-wrap { display:flex; justify-content:center; align-items:center; padding:80px 0; }
     </style>
 </head>
 <body class="d-flex flex-column min-vh-100">
@@ -146,20 +147,21 @@
         <div class="container py-5">
             <h2 class="fw-bold mb-1">Featured Trips</h2>
             <p class="text-muted mb-4">Handpicked adventures for every type of hiker</p>
-            <div class="row g-4">
-                <div class="col-md-4" v-for="trip in trips.slice(0,3)" :key="trip.id">
-                    <div class="card trip-card border-0 shadow-sm" @click="viewTrip(trip.id)">
-                        <img :src="trip.imageUrl" class="card-img-top" :alt="trip.name">
+            <div v-if="loading" class="spinner-wrap"><div class="spinner-border" style="color:var(--tb-green)"></div></div>
+            <div class="row g-4" v-else>
+                <div class="col-md-4" v-for="trip in trips.slice(0,3)" :key="trip.tripid">
+                    <div class="card trip-card border-0 shadow-sm" @click="viewTrip(trip.tripid)">
+                        <img :src="tripImg(trip)" class="card-img-top" :alt="trip.tripname">
                         <div class="card-body">
                             <div class="d-flex justify-content-between align-items-start mb-2">
-                                <h5 class="card-title mb-0">{{ trip.name }}</h5>
-                                <span class="badge ms-2" :class="'badge-' + trip.difficulty.toLowerCase()">{{ trip.difficulty }}</span>
+                                <h5 class="card-title mb-0">{{ trip.tripname }}</h5>
+                                <span class="badge ms-2" :class="diffBadge(trip)">{{ diffLabel(trip) }}</span>
                             </div>
                             <p class="text-muted small mb-2"><i class="bi bi-geo-alt me-1"></i>{{ trip.city }}, {{ trip.state }}</p>
-                            <p class="card-text small text-muted">{{ trip.description.slice(0, 100) }}...</p>
+                            <p class="card-text small text-muted">{{ (trip.tripdescription || '').slice(0, 100) }}...</p>
                             <div class="d-flex justify-content-between align-items-center mt-3">
-                                <span class="fw-bold fs-5" style="color:var(--tb-green)">${{ trip.price }}</span>
-                                <small class="text-muted"><i class="bi bi-clock me-1"></i>{{ trip.lengthHours }} hour(s)</small>
+                                <span class="fw-bold fs-5" style="color:var(--tb-green)">${{ trip.tripprice }}</span>
+                                <small class="text-muted"><i class="bi bi-clock me-1"></i>{{ trip.lengthhours }} hour(s)</small>
                             </div>
                         </div>
                     </div>
@@ -243,7 +245,6 @@
                             <option value="name">Name A–Z</option>
                             <option value="price_asc">Price ↑</option>
                             <option value="price_desc">Price ↓</option>
-                            <option value="difficulty">Difficulty</option>
                         </select>
                     </div>
                     <div class="col-md-2">
@@ -255,40 +256,42 @@
             </div>
         </div>
 
-        <p class="text-muted small mb-3">Showing {{ filteredTrips.length }} trip(s)</p>
-
-        <div class="row g-4" v-if="filteredTrips.length">
-            <div class="col-md-4" v-for="trip in filteredTrips" :key="trip.id">
-                <div class="card trip-card border-0 shadow-sm" @click="viewTrip(trip.id)">
-                    <img :src="trip.imageUrl" class="card-img-top" :alt="trip.name">
-                    <div class="card-body">
-                        <div class="d-flex justify-content-between align-items-start mb-2">
-                            <h5 class="card-title mb-0">{{ trip.name }}</h5>
-                            <span class="badge ms-2" :class="'badge-' + trip.difficulty.toLowerCase()">{{ trip.difficulty }}</span>
+        <div v-if="loading" class="spinner-wrap"><div class="spinner-border" style="color:var(--tb-green)"></div></div>
+        <template v-else>
+            <p class="text-muted small mb-3">Showing {{ filteredTrips.length }} trip(s)</p>
+            <div class="row g-4" v-if="filteredTrips.length">
+                <div class="col-md-4" v-for="trip in filteredTrips" :key="trip.tripid">
+                    <div class="card trip-card border-0 shadow-sm" @click="viewTrip(trip.tripid)">
+                        <img :src="tripImg(trip)" class="card-img-top" :alt="trip.tripname">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <h5 class="card-title mb-0">{{ trip.tripname }}</h5>
+                                <span class="badge ms-2" :class="diffBadge(trip)">{{ diffLabel(trip) }}</span>
+                            </div>
+                            <p class="text-muted small mb-1"><i class="bi bi-geo-alt me-1"></i>{{ trip.city }}, {{ trip.state }}</p>
+                            <p class="text-muted small mb-2"><i class="bi bi-clock me-1"></i>{{ trip.lengthhours }} hour(s)&nbsp;&nbsp;<i class="bi bi-people me-1"></i>Max {{ trip.maxcapacity }}</p>
+                            <p class="card-text small text-muted">{{ (trip.tripdescription || '').slice(0, 90) }}...</p>
+                            <div class="d-flex justify-content-between align-items-center mt-3">
+                                <span class="fw-bold fs-5" style="color:var(--tb-green)">${{ trip.tripprice }}</span>
+                                <span class="badge" :class="spotsLeft(trip) > 0 ? 'bg-success' : 'bg-danger'">
+                                    {{ spotsLeft(trip) > 0 ? spotsLeft(trip) + ' spots left' : 'Full' }}
+                                </span>
+                            </div>
                         </div>
-                        <p class="text-muted small mb-1"><i class="bi bi-geo-alt me-1"></i>{{ trip.city }}, {{ trip.state }}</p>
-                        <p class="text-muted small mb-2"><i class="bi bi-clock me-1"></i>{{ trip.lengthHours }} hour(s)&nbsp;&nbsp;<i class="bi bi-people me-1"></i>Max {{ trip.maxParticipants }}</p>
-                        <p class="card-text small text-muted">{{ trip.description.slice(0, 90) }}...</p>
-                        <div class="d-flex justify-content-between align-items-center mt-3">
-                            <span class="fw-bold fs-5" style="color:var(--tb-green)">${{ trip.price }}</span>
-                            <span class="badge" :class="spotsLeftForTrip(trip.id) > 0 ? 'bg-success' : 'bg-danger'">
-                                {{ spotsLeftForTrip(trip.id) > 0 ? spotsLeftForTrip(trip.id) + ' spots left' : 'Full' }}
-                            </span>
+                        <div class="card-footer bg-white border-0 pb-3 pt-0">
+                            <button class="btn w-100" :class="spotsLeft(trip) > 0 ? 'btn-primary' : 'btn-secondary'" :disabled="spotsLeft(trip) === 0" @click.stop="viewTrip(trip.tripid)">
+                                {{ spotsLeft(trip) > 0 ? 'View & Reserve' : 'Fully Booked' }}
+                            </button>
                         </div>
-                    </div>
-                    <div class="card-footer bg-white border-0 pb-3 pt-0">
-                        <button class="btn w-100" :class="spotsLeftForTrip(trip.id) > 0 ? 'btn-primary' : 'btn-secondary'" :disabled="spotsLeftForTrip(trip.id) === 0" @click.stop="viewTrip(trip.id)">
-                            {{ spotsLeftForTrip(trip.id) > 0 ? 'View & Reserve' : 'Fully Booked' }}
-                        </button>
                     </div>
                 </div>
             </div>
-        </div>
-        <div v-else class="text-center py-5">
-            <i class="bi bi-search display-4 text-muted"></i>
-            <p class="text-muted mt-3">No trips match your search.</p>
-            <button class="btn btn-outline-primary" @click="clearSearch">Clear Filters</button>
-        </div>
+            <div v-else class="text-center py-5">
+                <i class="bi bi-search display-4 text-muted"></i>
+                <p class="text-muted mt-3">No trips match your search.</p>
+                <button class="btn btn-outline-primary" @click="clearSearch">Clear Filters</button>
+            </div>
+        </template>
     </div>
 
     <!-- =========================================================
@@ -298,26 +301,20 @@
         <nav aria-label="breadcrumb" class="mb-4">
             <ol class="breadcrumb">
                 <li class="breadcrumb-item"><a href="#" @click.prevent="go('/trips')" style="color:var(--tb-green)">Trips</a></li>
-                <li class="breadcrumb-item active">{{ selectedTrip.name }}</li>
+                <li class="breadcrumb-item active">{{ selectedTrip.tripname }}</li>
             </ol>
         </nav>
         <div class="row g-4">
             <div class="col-md-7">
-                <img :src="selectedTrip.imageUrl" class="img-fluid rounded-3 shadow mb-4 w-100" style="height:340px;object-fit:cover" :alt="selectedTrip.name">
-                <h2 class="fw-bold">{{ selectedTrip.name }}</h2>
+                <img :src="tripImg(selectedTrip)" class="img-fluid rounded-3 shadow mb-4 w-100" style="height:340px;object-fit:cover" :alt="selectedTrip.tripname">
+                <h2 class="fw-bold">{{ selectedTrip.tripname }}</h2>
                 <div class="d-flex flex-wrap gap-2 mb-3">
-                    <span class="badge fs-6 px-3 py-2" :class="'badge-' + selectedTrip.difficulty.toLowerCase()">{{ selectedTrip.difficulty }}</span>
-                    <span class="badge bg-secondary fs-6 px-3 py-2"><i class="bi bi-clock me-1"></i>{{ selectedTrip.lengthHours }} hour(s)</span>
+                    <span class="badge fs-6 px-3 py-2" :class="diffBadge(selectedTrip)">{{ diffLabel(selectedTrip) }}</span>
+                    <span class="badge bg-secondary fs-6 px-3 py-2"><i class="bi bi-clock me-1"></i>{{ selectedTrip.lengthhours }} hour(s)</span>
                     <span class="badge bg-info text-dark fs-6 px-3 py-2"><i class="bi bi-geo-alt me-1"></i>{{ selectedTrip.city }}, {{ selectedTrip.state }}</span>
                 </div>
-                <p class="lead text-muted">{{ selectedTrip.description }}</p>
+                <p class="lead text-muted">{{ selectedTrip.tripdescription }}</p>
                 <hr>
-                <h5 class="fw-bold">Trip Highlights</h5>
-                <ul class="list-unstyled">
-                    <li class="mb-1" v-for="h in selectedTrip.highlights" :key="h">
-                        <i class="bi bi-check2-circle me-2" style="color:var(--tb-green)"></i>{{ h }}
-                    </li>
-                </ul>
                 <h5 class="fw-bold mt-4">What's Included</h5>
                 <ul class="list-unstyled">
                     <li class="mb-1"><i class="bi bi-check2-circle me-2" style="color:var(--tb-green)"></i>Certified wilderness guide</li>
@@ -329,18 +326,20 @@
             <div class="col-md-5">
                 <div class="card border-0 shadow sticky-top" style="top:76px">
                     <div class="card-body p-4">
-                        <h3 class="fw-bold mb-0" style="color:var(--tb-green)">${{ selectedTrip.price }}<small class="fs-6 text-muted fw-normal"> / person</small></h3>
-                        <p class="text-muted small mb-3">⭐ 4.9 &middot; {{ selectedTrip.reviewCount }} reviews</p>
+                        <h3 class="fw-bold mb-0" style="color:var(--tb-green)">${{ selectedTrip.tripprice }}<small class="fs-6 text-muted fw-normal"> / person</small></h3>
+                        <p class="text-muted small mb-3">⭐ 4.9 rating</p>
                         <table class="table table-sm table-borderless mb-3">
-                            <tr><td class="text-muted ps-0">Guide</td><td class="fw-semibold">{{ employeeNameById(selectedTrip.empid) }}</td></tr>
-                            <tr><td class="text-muted ps-0">Duration</td><td>{{ selectedTrip.lengthHours }} hour(s)</td></tr>
-                            <tr><td class="text-muted ps-0">Difficulty</td><td>{{ selectedTrip.difficulty }}</td></tr>
-                            <tr><td class="text-muted ps-0">Group Size</td><td>Max {{ selectedTrip.maxParticipants }}</td></tr>
-                            <tr><td class="text-muted ps-0">Availability</td><td>{{ spotsLeftForTrip(selectedTrip.id) }} spots left</td></tr>
-                            <tr><td class="text-muted ps-0">Next Date</td><td>{{ fmtDate(selectedTrip.nextDate) }}</td></tr>
+                            <tr><td class="text-muted ps-0">Guide</td><td class="fw-semibold">{{ selectedTrip.employeefirst }} {{ selectedTrip.employeelast }}</td></tr>
+                            <tr><td class="text-muted ps-0">Duration</td><td>{{ selectedTrip.lengthhours }} hour(s)</td></tr>
+                            <tr><td class="text-muted ps-0">Distance</td><td>{{ selectedTrip.distancemiles }} miles</td></tr>
+                            <tr><td class="text-muted ps-0">Group Size</td><td>Max {{ selectedTrip.maxcapacity }}</td></tr>
+                            <tr><td class="text-muted ps-0">Availability</td><td>{{ spotsLeft(selectedTrip) }} spots left</td></tr>
+                            <tr><td class="text-muted ps-0">Trip Date</td><td>{{ fmtDate(selectedTrip.tripdate) }}</td></tr>
+                            <tr><td class="text-muted ps-0">Start Time</td><td>{{ selectedTrip.starttime }}</td></tr>
+                            <tr><td class="text-muted ps-0">Status</td><td>{{ selectedTrip.tripstatus }}</td></tr>
                         </table>
-                        <template v-if="spotsLeftForTrip(selectedTrip.id) > 0">
-                            <button v-if="currentUser && currentUser.role === 'Customer'" class="btn btn-primary w-100 btn-lg mb-2" @click="go('/reserve/' + selectedTrip.id)">
+                        <template v-if="spotsLeft(selectedTrip) > 0">
+                            <button v-if="currentUser && currentUser.role === 'Customer'" class="btn btn-primary w-100 btn-lg mb-2" @click="go('/reserve/' + selectedTrip.tripid)">
                                 <i class="bi bi-calendar-check me-2"></i>Reserve This Trip
                             </button>
                             <button v-else-if="!currentUser" class="btn btn-primary w-100 btn-lg mb-2" @click="go('/login')">
@@ -365,17 +364,17 @@
                 <nav aria-label="breadcrumb" class="mb-4">
                     <ol class="breadcrumb">
                         <li class="breadcrumb-item"><a href="#" @click.prevent="go('/trips')" style="color:var(--tb-green)">Trips</a></li>
-                        <li class="breadcrumb-item"><a href="#" @click.prevent="viewTrip(selectedTrip.id)" style="color:var(--tb-green)">{{ selectedTrip.name }}</a></li>
+                        <li class="breadcrumb-item"><a href="#" @click.prevent="viewTrip(selectedTrip.tripid)" style="color:var(--tb-green)">{{ selectedTrip.tripname }}</a></li>
                         <li class="breadcrumb-item active">Reserve</li>
                     </ol>
                 </nav>
                 <div class="card border-0 shadow-sm">
                     <div class="card-body p-4">
                         <div class="d-flex align-items-center mb-4 p-3 rounded-3" style="background:var(--tb-green-pale)">
-                            <img :src="selectedTrip.imageUrl" style="width:80px;height:60px;object-fit:cover;border-radius:8px" class="me-3 flex-shrink-0">
+                            <img :src="tripImg(selectedTrip)" style="width:80px;height:60px;object-fit:cover;border-radius:8px" class="me-3 flex-shrink-0">
                             <div>
-                                <h6 class="fw-bold mb-0">{{ selectedTrip.name }}</h6>
-                                <small class="text-muted">{{ selectedTrip.city }}, {{ selectedTrip.state }} &middot; {{ selectedTrip.lengthHours }} hour(s) &middot; ${{ selectedTrip.price }}/person</small>
+                                <h6 class="fw-bold mb-0">{{ selectedTrip.tripname }}</h6>
+                                <small class="text-muted">{{ selectedTrip.city }}, {{ selectedTrip.state }} &middot; {{ selectedTrip.lengthhours }} hour(s) &middot; ${{ selectedTrip.tripprice }}/person</small>
                             </div>
                         </div>
                         <h5 class="fw-bold mb-3">Reservation Details</h5>
@@ -398,14 +397,14 @@
                                     <input type="tel" class="form-control" v-model="resForm.phone" required placeholder="555-000-0000">
                                 </div>
                                 <div class="col-md-6">
-                                    <label class="form-label fw-semibold">Preferred Date</label>
-                                    <input type="date" class="form-control" v-model="resForm.date" :min="todayStr" required>
-                                </div>
-                                <div class="col-md-6">
                                     <label class="form-label fw-semibold">Participants</label>
                                     <select class="form-select" v-model.number="resForm.participants">
-                                        <option v-for="n in Math.min(spotsLeftForTrip(selectedTrip.id), 8)" :value="n">{{ n }}</option>
+                                        <option v-for="n in Math.min(spotsLeft(selectedTrip), 8)" :value="n">{{ n }}</option>
                                     </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold">Trip Date</label>
+                                    <input type="text" class="form-control" :value="fmtDate(selectedTrip.tripdate)" disabled>
                                 </div>
                                 <div class="col-12">
                                     <label class="form-label fw-semibold">Special Requests / Medical Info</label>
@@ -416,15 +415,17 @@
                             <div class="d-flex justify-content-between align-items-center mb-3 p-3 rounded-3 bg-light">
                                 <div>
                                     <span class="fw-semibold">Total Cost</span>
-                                    <p class="text-muted small mb-0">${{ selectedTrip.price }} × {{ resForm.participants }} participant(s)</p>
+                                    <p class="text-muted small mb-0">${{ selectedTrip.tripprice }} × {{ resForm.participants }} participant(s)</p>
                                 </div>
-                                <span class="fw-bold fs-3" style="color:var(--tb-green)">${{ (selectedTrip.price * resForm.participants).toFixed(2) }}</span>
+                                <span class="fw-bold fs-3" style="color:var(--tb-green)">${{ (selectedTrip.tripprice * resForm.participants).toFixed(2) }}</span>
                             </div>
+                            <div v-if="resErr" class="alert alert-danger py-2 small">{{ resErr }}</div>
                             <div class="d-grid gap-2">
-                                <button type="submit" class="btn btn-primary btn-lg">
-                                    <i class="bi bi-calendar-check me-2"></i>Confirm Reservation
+                                <button type="submit" class="btn btn-primary btn-lg" :disabled="submitting">
+                                    <span v-if="submitting" class="spinner-border spinner-border-sm me-2"></span>
+                                    <i v-else class="bi bi-calendar-check me-2"></i>Confirm Reservation
                                 </button>
-                                <button type="button" class="btn btn-outline-secondary" @click="viewTrip(selectedTrip.id)">Back</button>
+                                <button type="button" class="btn btn-outline-secondary" @click="viewTrip(selectedTrip.tripid)">Back</button>
                             </div>
                         </form>
                     </div>
@@ -441,14 +442,13 @@
             <div class="col-md-6 text-center">
                 <div class="card border-0 shadow-sm p-5">
                     <i class="bi bi-check-circle-fill text-success" style="font-size:4rem"></i>
-                    <h2 class="fw-bold mt-3 mb-1">Reservation Confirmed!</h2>
+                    <h2 class="fw-bold mt-3 mb-1">Reservation Submitted!</h2>
                     <p class="text-muted">Booking Reference: <strong>#{{ lastRes ? lastRes.id : '' }}</strong></p>
                     <div class="alert alert-success text-start mt-2" v-if="lastRes">
-                        <strong>{{ reservationTripName(lastRes.id) }}</strong><br>
-                        <small><i class="bi bi-calendar me-1"></i>{{ fmtDate(lastRes.date) }}</small><br>
+                        <strong>{{ lastRes.tripname }}</strong><br>
                         <small><i class="bi bi-people me-1"></i>{{ lastRes.participants }} participant(s) &middot; <strong>Total: ${{ lastRes.total }}</strong></small>
                     </div>
-                    <p class="text-muted small">A confirmation email will be sent to <strong>{{ lastRes ? lastRes.email : '' }}</strong></p>
+                    <p class="text-muted small">Status: <strong>Pending</strong> — an employee will confirm your reservation.</p>
                     <div class="d-grid gap-2 mt-2">
                         <button class="btn btn-primary" @click="go('/my-reservations')">View My Reservations</button>
                         <button class="btn btn-outline-primary" @click="go('/trips')">Browse More Trips</button>
@@ -464,49 +464,48 @@
     <div v-else-if="page === 'myres'" class="flex-grow-1 container py-5">
         <h2 class="fw-bold mb-1">My Reservations</h2>
         <p class="text-muted mb-4">Track and manage your upcoming hikes</p>
-        <div v-if="myReservations.length === 0" class="text-center py-5">
-            <i class="bi bi-calendar-x display-4 text-muted"></i>
-            <p class="text-muted mt-3">You have no reservations yet.</p>
-            <button class="btn btn-primary" @click="go('/trips')">Browse Trips</button>
-        </div>
-        <div class="row g-3" v-else>
-            <div class="col-12" v-for="res in myReservations" :key="res.id">
-                <div class="card border-0 shadow-sm">
-                    <div class="card-body">
-                        <div class="row align-items-center g-2">
-                            <div class="col-md-1">
-                                <img :src="tripImg(res.tripId)" style="width:100%;height:60px;object-fit:cover;border-radius:6px">
-                            </div>
-                            <div class="col-md-5">
-                                <h6 class="fw-bold mb-0">{{ reservationTripName(res.id) }}</h6>
-                                <small class="text-muted">
-                                    <i class="bi bi-calendar me-1"></i>{{ fmtDate(res.date) }} &nbsp;·&nbsp;
-                                    <i class="bi bi-clock-history me-1"></i>{{ fmtDate(res.reservationDate) }} &nbsp;·&nbsp;
-                                    <i class="bi bi-people me-1"></i>{{ res.participants }} participant(s)
-                                </small>
-                            </div>
-                            <div class="col-md-2 text-center">
-                                <span class="badge fs-6" :class="{
-                                    'bg-warning text-dark': res.reservationStatus === 'Pending',
-                                    'bg-success': res.reservationStatus === 'Confirmed',
-                                    'bg-danger': res.reservationStatus === 'Cancelled',
-                                    'bg-secondary': res.reservationStatus === 'Completed'
-                                }">{{ res.reservationStatus }}</span>
-                            </div>
-                            <div class="col-md-2 text-center fw-bold" style="color:var(--tb-green)">${{ res.total }}</div>
-                            <div class="col-md-2 text-end">
-                                <button v-if="res.reservationStatus === 'Pending' || res.reservationStatus === 'Confirmed'"
-                                    class="btn btn-sm btn-outline-danger"
-                                    @click="cancelRes(res.id)">
-                                    <i class="bi bi-x-circle me-1"></i>Cancel
-                                </button>
-                                <span v-else class="text-muted small">—</span>
+        <div v-if="loading" class="spinner-wrap"><div class="spinner-border" style="color:var(--tb-green)"></div></div>
+        <template v-else>
+            <div v-if="myReservations.length === 0" class="text-center py-5">
+                <i class="bi bi-calendar-x display-4 text-muted"></i>
+                <p class="text-muted mt-3">You have no reservations yet.</p>
+                <button class="btn btn-primary" @click="go('/trips')">Browse Trips</button>
+            </div>
+            <div class="row g-3" v-else>
+                <div class="col-12" v-for="res in myReservations" :key="res.id">
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-body">
+                            <div class="row align-items-center g-2">
+                                <div class="col-md-5">
+                                    <h6 class="fw-bold mb-0">{{ res.tripname || 'Unknown Trip' }}</h6>
+                                    <small class="text-muted">
+                                        <i class="bi bi-calendar me-1"></i>{{ fmtDate(res.tripdate) }} &nbsp;·&nbsp;
+                                        <i class="bi bi-people me-1"></i>{{ res.participants }} participant(s)
+                                    </small>
+                                </div>
+                                <div class="col-md-2 text-center">
+                                    <span class="badge fs-6" :class="{
+                                        'bg-warning text-dark': res.reservationstatus === 'Pending',
+                                        'bg-success': res.reservationstatus === 'Confirmed',
+                                        'bg-danger': res.reservationstatus === 'Cancelled',
+                                        'bg-secondary': res.reservationstatus === 'Completed'
+                                    }">{{ res.reservationstatus }}</span>
+                                </div>
+                                <div class="col-md-3 text-center fw-bold" style="color:var(--tb-green)">${{ Number(res.total).toFixed(2) }}</div>
+                                <div class="col-md-2 text-end">
+                                    <button v-if="res.reservationstatus === 'Pending' || res.reservationstatus === 'Confirmed'"
+                                        class="btn btn-sm btn-outline-danger"
+                                        @click="cancelRes(res.id)">
+                                        <i class="bi bi-x-circle me-1"></i>Cancel
+                                    </button>
+                                    <span v-else class="text-muted small">—</span>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
+        </template>
     </div>
 
     <!-- =========================================================
@@ -533,14 +532,17 @@
                                     <input type="password" class="form-control" v-model="loginForm.password" placeholder="Enter password" required>
                                 </div>
                                 <div v-if="loginErr" class="alert alert-danger py-2 small">{{ loginErr }}</div>
-                                <button type="submit" class="btn btn-primary w-100 mb-3">Sign In</button>
+                                <button type="submit" class="btn btn-primary w-100 mb-3" :disabled="submitting">
+                                    <span v-if="submitting" class="spinner-border spinner-border-sm me-2"></span>
+                                    Sign In
+                                </button>
                                 <p class="text-center text-muted small mb-3">
                                     No account? <a href="#" @click.prevent="go('/register')" style="color:var(--tb-green)">Sign up free</a>
                                 </p>
                                 <hr>
                                 <p class="text-center text-muted small mb-2">Demo accounts:</p>
                                 <div class="d-flex gap-2">
-                                    <button type="button" class="btn btn-outline-secondary btn-sm flex-fill" @click="loginForm={username:'hiker123',password:'password123'}">
+                                    <button type="button" class="btn btn-outline-secondary btn-sm flex-fill" @click="loginForm={username:'username1',password:'password'}">
                                         <i class="bi bi-person me-1"></i>Customer
                                     </button>
                                     <button type="button" class="btn btn-outline-secondary btn-sm flex-fill" @click="loginForm={username:'JaneSmith1',password:'Buttercup'}">
@@ -593,7 +595,10 @@
                                     </div>
                                     <div class="col-12">
                                         <div v-if="regErr" class="alert alert-danger py-2 small">{{ regErr }}</div>
-                                        <button type="submit" class="btn btn-primary w-100">Create Account</button>
+                                        <button type="submit" class="btn btn-primary w-100" :disabled="submitting">
+                                            <span v-if="submitting" class="spinner-border spinner-border-sm me-2"></span>
+                                            Create Account
+                                        </button>
                                     </div>
                                 </div>
                                 <p class="text-center text-muted small mt-3">
@@ -621,7 +626,6 @@
                     <h5 class="fw-bold mb-0">{{ currentUser.username }}</h5>
                     <span class="badge mt-1" :class="currentUser.role === 'Employee' ? 'bg-warning text-dark' : 'bg-success'">{{ currentUser.role }}</span>
                     <p class="text-muted small mt-2 mb-1"><i class="bi bi-envelope me-2"></i>{{ currentUser.email }}</p>
-                    <p class="text-muted small mb-0"><i class="bi bi-calendar me-2"></i>Member since {{ fmtDate(currentUser.createdAt) }}</p>
                 </div>
             </div>
             <div class="col-md-8">
@@ -690,13 +694,13 @@
                 <div class="col-md-3">
                     <div class="card border-0 shadow-sm stat-card p-3">
                         <p class="text-muted small mb-1">Reservations</p>
-                        <h2 class="fw-bold mb-0">{{ reservations.length }}</h2>
+                        <h2 class="fw-bold mb-0">{{ allReservations.length }}</h2>
                     </div>
                 </div>
                 <div class="col-md-3">
                     <div class="card border-0 shadow-sm stat-card p-3">
                         <p class="text-muted small mb-1">Pending</p>
-                        <h2 class="fw-bold mb-0">{{ reservations.filter(r=>r.reservationStatus==='Pending').length }}</h2>
+                        <h2 class="fw-bold mb-0">{{ allReservations.filter(r=>r.reservationstatus==='Pending').length }}</h2>
                     </div>
                 </div>
                 <div class="col-md-3">
@@ -709,27 +713,29 @@
             <div class="card border-0 shadow-sm">
                 <div class="card-body">
                     <h6 class="fw-bold mb-3">Recent Reservations</h6>
-                    <table class="table table-hover align-middle mb-0">
+                    <div v-if="loading" class="spinner-wrap"><div class="spinner-border" style="color:var(--tb-green)"></div></div>
+                    <table v-else class="table table-hover align-middle mb-0">
                         <thead class="table-light">
                             <tr><th>#</th><th>Customer</th><th>Trip</th><th>Trip Date</th><th>Reserved On</th><th>Status</th><th>Total</th></tr>
                         </thead>
                         <tbody>
-                            <tr v-for="res in reservations.slice(-5).reverse()" :key="res.id">
+                            <tr v-for="res in allReservations.slice(0,5)" :key="res.id">
                                 <td class="text-muted">#{{ res.id }}</td>
                                 <td>{{ res.firstName }} {{ res.lastName }}</td>
-                                <td>{{ reservationTripName(res.id) }}</td>
-                                <td>{{ fmtDate(res.date) }}</td>
-                                <td>{{ fmtDate(res.reservationDate) }}</td>
+                                <td>{{ res.tripname }}</td>
+                                <td>{{ fmtDate(res.tripdate) }}</td>
+                                <td>{{ fmtDate(res.reservationdate) }}</td>
                                 <td>
                                     <span class="badge" :class="{
-                                        'bg-warning text-dark': res.reservationStatus==='Pending',
-                                        'bg-success': res.reservationStatus==='Confirmed',
-                                        'bg-danger': res.reservationStatus==='Cancelled',
-                                        'bg-secondary': res.reservationStatus==='Completed'
-                                    }">{{ res.reservationStatus }}</span>
+                                        'bg-warning text-dark': res.reservationstatus==='Pending',
+                                        'bg-success': res.reservationstatus==='Confirmed',
+                                        'bg-danger': res.reservationstatus==='Cancelled',
+                                        'bg-secondary': res.reservationstatus==='Completed'
+                                    }">{{ res.reservationstatus }}</span>
                                 </td>
-                                <td>${{ res.total }}</td>
+                                <td>${{ Number(res.total).toFixed(2) }}</td>
                             </tr>
+                            <tr v-if="!allReservations.length"><td colspan="7" class="text-center text-muted py-3">No reservations yet.</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -744,25 +750,28 @@
                     <i class="bi bi-plus-lg me-1"></i>Add New Trip
                 </button>
             </div>
-            <div class="card border-0 shadow-sm">
+            <div v-if="loading" class="spinner-wrap"><div class="spinner-border" style="color:var(--tb-green)"></div></div>
+            <div v-else class="card border-0 shadow-sm">
                 <div class="table-responsive">
                     <table class="table table-hover align-middle mb-0">
                         <thead class="table-light">
-                            <tr><th>Trip Name</th><th>Guide</th><th>Duration</th><th>Price</th><th>Spots</th><th>Status</th><th>Actions</th></tr>
+                            <tr><th>Trip Name</th><th>Guide</th><th>Date</th><th>Duration</th><th>Price</th><th>Capacity</th><th>Status</th><th>Actions</th></tr>
                         </thead>
                         <tbody>
-                            <tr v-for="trip in trips" :key="trip.id">
-                                <td class="fw-semibold">{{ trip.name }}</td>
-                                <td>{{ employeeNameById(trip.empid) }}</td>
-                                <td>{{ trip.lengthHours }} hour(s)</td>
-                                <td>${{ trip.price }}</td>
-                                <td>{{ spotsLeftForTrip(trip.id) }} / {{ trip.maxParticipants }}</td>
-                                <td><span class="badge" :class="spotsLeftForTrip(trip.id) > 0 ? 'bg-success' : 'bg-danger'">{{ spotsLeftForTrip(trip.id) > 0 ? 'Available' : 'Full' }}</span></td>
+                            <tr v-for="trip in trips" :key="trip.tripid">
+                                <td class="fw-semibold">{{ trip.tripname }}</td>
+                                <td>{{ trip.employeefirst }} {{ trip.employeelast }}</td>
+                                <td>{{ fmtDate(trip.tripdate) }}</td>
+                                <td>{{ trip.lengthhours }} hr(s)</td>
+                                <td>${{ trip.tripprice }}</td>
+                                <td>{{ spotsLeft(trip) }} / {{ trip.maxcapacity }}</td>
+                                <td><span class="badge" :class="spotsLeft(trip) > 0 ? 'bg-success' : 'bg-danger'">{{ spotsLeft(trip) > 0 ? 'Available' : 'Full' }}</span></td>
                                 <td>
                                     <button class="btn btn-sm btn-outline-primary me-1" @click="openTripModal(trip)"><i class="bi bi-pencil"></i></button>
-                                    <button class="btn btn-sm btn-outline-danger" @click="deleteTrip(trip.id)"><i class="bi bi-trash"></i></button>
+                                    <button class="btn btn-sm btn-outline-danger" @click="deleteTrip(trip.tripid)"><i class="bi bi-trash"></i></button>
                                 </td>
                             </tr>
+                            <tr v-if="!trips.length"><td colspan="8" class="text-center text-muted py-3">No trips found.</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -784,7 +793,8 @@
                     </select>
                 </div>
             </div>
-            <div class="card border-0 shadow-sm">
+            <div v-if="loading" class="spinner-wrap"><div class="spinner-border" style="color:var(--tb-green)"></div></div>
+            <div v-else class="card border-0 shadow-sm">
                 <div class="table-responsive">
                     <table class="table table-hover align-middle mb-0">
                         <thead class="table-light">
@@ -794,21 +804,23 @@
                             <tr v-for="res in filteredEmpRes" :key="res.id">
                                 <td class="text-muted">#{{ res.id }}</td>
                                 <td>{{ res.firstName }} {{ res.lastName }}<br><small class="text-muted">{{ res.email }}</small></td>
-                                <td>{{ reservationTripName(res.id) }}</td>
-                                <td>{{ fmtDate(res.date) }}</td>
-                                <td>{{ fmtDate(res.reservationDate) }}</td>
+                                <td>{{ res.tripname }}</td>
+                                <td>{{ fmtDate(res.tripdate) }}</td>
+                                <td>{{ fmtDate(res.reservationdate) }}</td>
                                 <td class="text-center">{{ res.participants }}</td>
-                                <td>${{ res.total }}</td>
+                                <td>${{ Number(res.total).toFixed(2) }}</td>
                                 <td>
                                     <span class="badge" :class="{
-                                        'bg-warning text-dark': res.reservationStatus==='Pending',
-                                        'bg-success': res.reservationStatus==='Confirmed',
-                                        'bg-danger': res.reservationStatus==='Cancelled',
-                                        'bg-secondary': res.reservationStatus==='Completed'
-                                    }">{{ res.reservationStatus }}</span>
+                                        'bg-warning text-dark': res.reservationstatus==='Pending',
+                                        'bg-success': res.reservationstatus==='Confirmed',
+                                        'bg-danger': res.reservationstatus==='Cancelled',
+                                        'bg-secondary': res.reservationstatus==='Completed'
+                                    }">{{ res.reservationstatus }}</span>
                                 </td>
                                 <td>
-                                    <select class="form-select form-select-sm" style="width:130px" v-model="res.reservationStatus" @change="flash('Reservation #' + res.id + ' updated.')">
+                                    <select class="form-select form-select-sm" style="width:130px"
+                                        v-model="res.reservationstatus"
+                                        @change="updateResStatus(res)">
                                         <option>Pending</option>
                                         <option>Confirmed</option>
                                         <option>Cancelled</option>
@@ -853,7 +865,7 @@
                         <div class="row g-3">
                             <div class="col-12">
                                 <label class="form-label fw-semibold">Trip Name *</label>
-                                <input type="text" class="form-control" v-model="tripForm.name" required>
+                                <input type="text" class="form-control" v-model="tripForm.tripname" required>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">Guide *</label>
@@ -864,11 +876,11 @@
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">Price ($) *</label>
-                                <input type="number" class="form-control" v-model.number="tripForm.price" min="1" required>
+                                <input type="number" class="form-control" v-model.number="tripForm.tripprice" min="0" required>
                             </div>
                             <div class="col-md-3">
-                                <label class="form-label fw-semibold">Street *</label>
-                                <input type="text" class="form-control" v-model="tripForm.street" required>
+                                <label class="form-label fw-semibold">Street</label>
+                                <input type="text" class="form-control" v-model="tripForm.street">
                             </div>
                             <div class="col-md-3">
                                 <label class="form-label fw-semibold">City *</label>
@@ -884,46 +896,44 @@
                             </div>
                             <div class="col-md-4">
                                 <label class="form-label fw-semibold">Length (hours) *</label>
-                                <input type="number" class="form-control" v-model.number="tripForm.lengthHours" min="1" required>
+                                <input type="number" class="form-control" v-model.number="tripForm.lengthhours" min="1" required>
                             </div>
                             <div class="col-md-4">
                                 <label class="form-label fw-semibold">Distance (miles) *</label>
-                                <input type="number" class="form-control" v-model.number="tripForm.distanceMiles" min="0" required>
+                                <input type="number" class="form-control" v-model.number="tripForm.distancemiles" min="0" required>
                             </div>
                             <div class="col-md-4">
                                 <label class="form-label fw-semibold">Trip Status *</label>
-                                <select class="form-select" v-model="tripForm.tripStatus" required>
+                                <select class="form-select" v-model="tripForm.tripstatus" required>
                                     <option>Scheduled</option>
                                     <option>Completed</option>
                                     <option>Cancelled</option>
+                                    <option>Incomplete</option>
                                 </select>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">Start Time *</label>
-                                <input type="time" class="form-control" v-model="tripForm.startTime" required>
+                                <input type="time" class="form-control" v-model="tripForm.starttime" required>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">Max Participants *</label>
-                                <input type="number" class="form-control" v-model.number="tripForm.maxParticipants" min="1" max="50" required>
+                                <input type="number" class="form-control" v-model.number="tripForm.maxcapacity" min="1" max="50" required>
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label fw-semibold">Next Date *</label>
-                                <input type="date" class="form-control" v-model="tripForm.nextDate" :min="todayStr" required>
-                            </div>
-                            <div class="col-12">
-                                <label class="form-label fw-semibold">Image URL</label>
-                                <input type="url" class="form-control" v-model="tripForm.imageUrl" placeholder="https://...">
+                                <label class="form-label fw-semibold">Trip Date *</label>
+                                <input type="date" class="form-control" v-model="tripForm.tripdate" required>
                             </div>
                             <div class="col-12">
                                 <label class="form-label fw-semibold">Description *</label>
-                                <textarea class="form-control" rows="3" v-model="tripForm.description" required></textarea>
+                                <textarea class="form-control" rows="3" v-model="tripForm.tripdescription" required></textarea>
                             </div>
                         </div>
                     </form>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" form="tripForm" class="btn btn-primary">
+                    <button type="submit" form="tripForm" class="btn btn-primary" :disabled="submitting">
+                        <span v-if="submitting" class="spinner-border spinner-border-sm me-2"></span>
                         {{ tripModalMode === 'create' ? 'Add Trip' : 'Save Changes' }}
                     </button>
                 </div>
@@ -951,11 +961,11 @@
                     <h6 class="text-white fw-bold mb-2">Contact Us</h6>
                     <p class="small mb-1"><i class="bi bi-envelope me-2"></i>info@trailbuddy.com</p>
                     <p class="small mb-1"><i class="bi bi-telephone me-2"></i>(555) 123-4567</p>
-                    <p class="small mb-0"><i class="bi bi-geo-alt me-2"></i>Denver, CO 80202</p>
+                    <p class="small mb-0"><i class="bi bi-geo-alt me-2"></i>Tuscaloosa, AL 35401</p>
                 </div>
             </div>
             <hr style="border-color:rgba(255,255,255,0.15)">
-            <p class="text-center small mb-0">© 2025 TrailBuddy Hiking Services. All rights reserved.</p>
+            <p class="text-center small mb-0">© 2026 TrailBuddy Hiking Services. All rights reserved.</p>
         </div>
     </footer>
 
@@ -966,6 +976,32 @@
 <script>
 const { createApp } = Vue;
 
+// ── All API calls go through this base. In production Railway sets the host.
+const API = '';   // empty = same origin; Cursor will update if needed
+
+async function api(method, path, body) {
+    const opts = {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+    };
+    if (body) opts.body = JSON.stringify(body);
+    const res = await fetch(API + path, opts);
+    if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: res.statusText }));
+        throw new Error(err.error || res.statusText);
+    }
+    return res.status === 204 ? null : res.json();
+}
+
+// Trip image map — keyed by tripid for the 4 seeded trips; fallback for new ones
+const TRIP_IMAGES = {
+    11111: 'https://images.unsplash.com/photo-1551632811-561732d1e306?w=600',
+    11112: 'https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?w=600',
+    11113: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=600',
+    11114: 'https://images.unsplash.com/photo-1474044159687-1ee9f3a51722?w=600',
+};
+const FALLBACK_IMG = 'https://images.unsplash.com/photo-1448375240586-882707db888b?w=600';
+
 createApp({
     data() {
         return {
@@ -974,6 +1010,14 @@ createApp({
             alert: { show: false, type: 'success', message: '' },
             lastRes: null,
             tripIdParam: null,
+            loading: false,
+            submitting: false,
+
+            // Data from DB
+            trips: [],
+            employees: [],
+            allReservations: [],   // used by employee views
+            myReservations: [],    // used by customer
 
             // Search
             search: { keyword: '', difficulty: '', maxPrice: '', sort: 'name' },
@@ -985,161 +1029,45 @@ createApp({
             loginErr: '',
             regForm: { firstName: '', lastName: '', username: '', email: '', password: '' },
             regErr: '',
-            resForm: { firstName: '', lastName: '', email: '', phone: '', date: '', participants: 1, notes: '' },
+            resForm: { firstName: '', lastName: '', email: '', phone: '', participants: 1, notes: '' },
+            resErr: '',
             profForm: { firstName: '', lastName: '', email: '', phone: '' },
-            tripForm: { name: '', empid: null, street: '', city: '', state: '', zip: '', lengthHours: 1, distanceMiles: 0, tripStatus: 'Scheduled', startTime: '08:00', price: 0, maxParticipants: 12, nextDate: '', imageUrl: '', description: '' },
+            tripForm: { tripname: '', empid: null, street: '', city: '', state: '', zip: '', lengthhours: 1, distancemiles: 0, tripstatus: 'Scheduled', starttime: '08:00', tripprice: 0, maxcapacity: 12, tripdate: '', tripdescription: '' },
             tripModalMode: 'create',
             editingTripId: null,
-
-            // ---- MOCK DATA ----
-            employees: [
-                { id: 11111, firstName: 'Jane', lastName: 'Smith', username: 'JaneSmith1', password: 'Buttercup', email: 'JaneSmith1@gmail.com', phone: '555-444-3333', role: 'Employee' },
-                { id: 11112, firstName: 'Daphne', lastName: 'Johnson', username: 'DJohnson', password: 'employeePassword', email: 'DJ@gmail.com', phone: '555-888-9999', role: 'Employee' },
-                { id: 11113, firstName: 'Joe', lastName: 'Johnson', username: 'JJohnson1', password: 'Password', email: 'JJohnson@hotmail.com', phone: '555-777-8888', role: 'Employee' },
-                { id: 11114, firstName: 'Fred', lastName: 'Jones', username: 'Freddy1Jones', password: 'Scooby', email: 'Freddy1@aol.com', phone: '555-666-7777', role: 'Employee' },
-            ],
-            trips: [
-                {
-                    id: 1, name: 'Appalachian Trail Day Hike',
-                    empid: 11111, street: '100 Skyline Dr', city: 'Waynesboro', state: 'VA', zip: '22980',
-                    difficulty: 'Easy', lengthHours: 4, distanceMiles: 6, tripStatus: 'Scheduled', startTime: '08:00', price: 45,
-                    maxParticipants: 12, reviewCount: 48,
-                    nextDate: '2025-05-15',
-                    imageUrl: 'https://images.unsplash.com/photo-1551632811-561732d1e306?w=600',
-                    description: 'A scenic and peaceful hike through the ancient Appalachian Mountains. Perfect for beginners and families, this trail offers stunning mountain views, lush forests, and the chance to spot local wildlife.',
-                    highlights: ['Mountain summit views', 'Old-growth forest', 'Wildlife spotting', 'Wildflower meadows']
-                },
-                {
-                    id: 2, name: 'Rocky Mountain Summit Challenge',
-                    empid: 11112, street: '1000 US-36', city: 'Estes Park', state: 'CO', zip: '80517',
-                    difficulty: 'Hard', lengthHours: 8, distanceMiles: 10, tripStatus: 'Scheduled', startTime: '06:30', price: 120,
-                    maxParticipants: 8, reviewCount: 32,
-                    nextDate: '2025-06-01',
-                    imageUrl: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=600',
-                    description: 'Conquer one of Colorado\'s most breathtaking peaks with our expert mountaineering guide. This demanding climb rewards you with 360-degree panoramic views and an unforgettable achievement.',
-                    highlights: ['Summit at 14,000+ ft', 'Glacier views', 'Alpine meadows', 'Mountain goat sightings']
-                },
-                {
-                    id: 3, name: 'Cascade Waterfall Loop',
-                    empid: 11113, street: '53000 Historic Columbia River Hwy', city: 'Corbett', state: 'OR', zip: '97019',
-                    difficulty: 'Moderate', lengthHours: 6, distanceMiles: 7, tripStatus: 'Scheduled', startTime: '09:00', price: 75,
-                    maxParticipants: 10, reviewCount: 61,
-                    nextDate: '2025-05-22',
-                    imageUrl: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=600',
-                    description: 'Explore the stunning Columbia River Gorge and discover a series of magnificent waterfalls. This moderate loop winds through ancient fir forests and offers spectacular gorge overlooks.',
-                    highlights: ['7 waterfalls', 'Gorge overlooks', 'Ancient fir forest', 'Swimming holes']
-                },
-                {
-                    id: 4, name: 'Grand Canyon Rim to River',
-                    empid: 11114, street: 'S Entrance Rd', city: 'Grand Canyon', state: 'AZ', zip: '86023',
-                    difficulty: 'Hard', lengthHours: 16, distanceMiles: 15, tripStatus: 'Scheduled', startTime: '05:30', price: 250,
-                    maxParticipants: 6, reviewCount: 24,
-                    nextDate: '2025-07-10',
-                    imageUrl: 'https://images.unsplash.com/photo-1474044159687-1ee9f3a51722?w=600',
-                    description: 'Embark on the ultimate Grand Canyon adventure, descending from the South Rim to the Colorado River and back. A physically demanding but life-changing multi-day journey into one of the world\'s great natural wonders.',
-                    highlights: ['Colorado River access', 'Overnight at Phantom Ranch', 'Billion-year-old rock layers', 'Canyon stargazing']
-                },
-                {
-                    id: 5, name: 'Smoky Mountains Wildflower Walk',
-                    empid: 11111, street: '107 Park Headquarters Rd', city: 'Gatlinburg', state: 'TN', zip: '37738',
-                    difficulty: 'Easy', lengthHours: 3, distanceMiles: 4, tripStatus: 'Scheduled', startTime: '10:00', price: 35,
-                    maxParticipants: 15, reviewCount: 89,
-                    nextDate: '2025-05-10',
-                    imageUrl: 'https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?w=600',
-                    description: 'A gentle and enchanting walk through the Great Smoky Mountains during peak wildflower season. Our botanist guide will help you identify over 50 species of native wildflowers in full bloom.',
-                    highlights: ['50+ wildflower species', 'Historic homesteads', 'Creek crossings', 'Butterfly meadow']
-                },
-                {
-                    id: 6, name: 'Zion Narrows Adventure',
-                    empid: 11112, street: '1 Zion Park Blvd', city: 'Springdale', state: 'UT', zip: '84767',
-                    difficulty: 'Moderate', lengthHours: 7, distanceMiles: 8, tripStatus: 'Scheduled', startTime: '07:30', price: 95,
-                    maxParticipants: 10, reviewCount: 77,
-                    nextDate: '2025-06-15',
-                    imageUrl: 'https://images.unsplash.com/photo-1542401886-65d6c61db217?w=600',
-                    description: 'Wade through the famous Virgin River and hike through stunning slot canyons. Experience towering sandstone walls rising 1,000 feet above you in this iconic Utah adventure.',
-                    highlights: ['Slot canyon walls', 'River wading', 'Hanging gardens', 'Weeping Rock']
-                },
-                {
-                    id: 7, name: 'Olympic Rain Forest Trek',
-                    empid: 11113, street: '3002 Mt Angeles Rd', city: 'Port Angeles', state: 'WA', zip: '98362',
-                    difficulty: 'Easy', lengthHours: 4, distanceMiles: 5, tripStatus: 'Scheduled', startTime: '09:30', price: 55,
-                    maxParticipants: 12, reviewCount: 43,
-                    nextDate: '2025-05-28',
-                    imageUrl: 'https://images.unsplash.com/photo-1448375240586-882707db888b?w=600',
-                    description: 'Step into a magical temperate rain forest draped in emerald moss and ancient trees. The Hoh Rain Forest receives up to 14 feet of rain per year, creating a lush, otherworldly landscape.',
-                    highlights: ['Ancient Sitka spruce', 'Elk herds', 'Hall of Mosses', 'Hoh River views']
-                },
-                {
-                    id: 8, name: 'Mount Whitney Expedition',
-                    empid: 11114, street: 'Whitney Portal Rd', city: 'Lone Pine', state: 'CA', zip: '93545',
-                    difficulty: 'Hard', lengthHours: 24, distanceMiles: 22, tripStatus: 'Scheduled', startTime: '05:00', price: 350,
-                    maxParticipants: 6, reviewCount: 18,
-                    nextDate: '2025-08-01',
-                    imageUrl: 'https://images.unsplash.com/photo-1486870591958-9b9d0d1dda99?w=600',
-                    description: 'Stand on the highest point in the contiguous United States at 14,505 feet. This prestigious multi-day summit expedition is the pinnacle of achievement for serious outdoor enthusiasts.',
-                    highlights: ['Highest US peak (Lower 48)', 'Alpine lakes', 'Guitar Lake camp', '360° summit panorama']
-                },
-            ],
-
-            users: [
-                { id: 2, username: 'hiker123', password: 'password123', email: 'hiker@example.com', role: 'Customer', firstName: 'Jamie', lastName: 'Smith', phone: '555-0002', createdAt: new Date('2024-03-15') },
-                { id: 3, username: 'username1', password: 'password', email: 'email@email.com', role: 'Customer', firstName: 'Bob', lastName: 'Jones', phone: '255-555-5555', createdAt: new Date('2024-04-01') },
-                { id: 4, username: 'username2', password: 'password', email: 'email@hotmail.com', role: 'Customer', firstName: 'John', lastName: 'Smith', phone: '244-555-5555', createdAt: new Date('2024-04-01') },
-                { id: 5, username: 'JDoe1', password: 'password5', email: 'email@gmail.com', role: 'Customer', firstName: 'Jane', lastName: 'Doe', phone: '555-555-5555', createdAt: new Date('2024-04-01') },
-                { id: 6, username: 'JSchome1', password: 'password1234', email: 'JSchmoe@aol.com', role: 'Customer', firstName: 'Joe', lastName: 'Schmoe', phone: '444-555-5555', createdAt: new Date('2024-04-01') },
-                { id: 11111, username: 'JaneSmith1', password: 'Buttercup', email: 'JaneSmith1@gmail.com', role: 'Employee', firstName: 'Jane', lastName: 'Smith', phone: '555-444-3333', createdAt: new Date('2024-01-01') },
-                { id: 11112, username: 'DJohnson', password: 'employeePassword', email: 'DJ@gmail.com', role: 'Employee', firstName: 'Daphne', lastName: 'Johnson', phone: '555-888-9999', createdAt: new Date('2024-01-01') },
-                { id: 11113, username: 'JJohnson1', password: 'Password', email: 'JJohnson@hotmail.com', role: 'Employee', firstName: 'Joe', lastName: 'Johnson', phone: '555-777-8888', createdAt: new Date('2024-01-01') },
-                { id: 11114, username: 'Freddy1Jones', password: 'Scooby', email: 'Freddy1@aol.com', role: 'Employee', firstName: 'Fred', lastName: 'Jones', phone: '555-666-7777', createdAt: new Date('2024-01-01') },
-            ],
-
-            reservations: [
-                { id: 2001, userId: 2, firstName: 'Jamie', lastName: 'Smith', email: 'hiker@example.com', phone: '555-0002', date: '2025-05-15', participants: 2, total: '90.00', reservationDate: '2025-04-15', reservationStatus: 'Confirmed', notes: '' },
-                { id: 2002, userId: 2, firstName: 'Jamie', lastName: 'Smith', email: 'hiker@example.com', phone: '555-0002', date: '2025-05-10', participants: 1, total: '35.00', reservationDate: '2025-04-17', reservationStatus: 'Pending', notes: 'Mild pollen allergy' },
-            ],
-            reservationTrips: [
-                { reservationId: 2001, tripId: 1 },
-                { reservationId: 2002, tripId: 5 },
-            ],
-
-            nextTripId: 9,
-            nextResId: 2003,
         };
     },
 
     computed: {
+        selectedTrip() {
+            return this.trips.find(t => t.tripid === this.tripIdParam) || null;
+        },
         filteredTrips() {
             let list = this.trips.filter(t => {
                 const kw = this.search.keyword.toLowerCase();
-                const ok1 = !kw || t.name.toLowerCase().includes(kw) || t.city.toLowerCase().includes(kw) || t.state.toLowerCase().includes(kw) || t.description.toLowerCase().includes(kw);
-                const ok2 = !this.search.difficulty || t.difficulty === this.search.difficulty;
-                const ok3 = !this.search.maxPrice || t.price <= Number(this.search.maxPrice);
+                const ok1 = !kw || (t.tripname||'').toLowerCase().includes(kw) || (t.city||'').toLowerCase().includes(kw) || (t.state||'').toLowerCase().includes(kw) || (t.tripdescription||'').toLowerCase().includes(kw);
+                const ok2 = !this.search.difficulty || this.diffLabel(t) === this.search.difficulty;
+                const ok3 = !this.search.maxPrice || Number(t.tripprice) <= Number(this.search.maxPrice);
                 return ok1 && ok2 && ok3;
             });
-            if (this.search.sort === 'price_asc') list.sort((a,b) => a.price - b.price);
-            else if (this.search.sort === 'price_desc') list.sort((a,b) => b.price - a.price);
-            else if (this.search.sort === 'difficulty') list.sort((a,b) => ['Easy','Moderate','Hard'].indexOf(a.difficulty) - ['Easy','Moderate','Hard'].indexOf(b.difficulty));
-            else list.sort((a,b) => a.name.localeCompare(b.name));
+            if (this.search.sort === 'price_asc') list.sort((a,b) => a.tripprice - b.tripprice);
+            else if (this.search.sort === 'price_desc') list.sort((a,b) => b.tripprice - a.tripprice);
+            else list.sort((a,b) => (a.tripname||'').localeCompare(b.tripname||''));
             return list;
         },
-        selectedTrip() {
-            return this.trips.find(t => t.id === this.tripIdParam) || null;
-        },
-        myReservations() {
-            if (!this.currentUser) return [];
-            return this.reservations.filter(r => r.userId === this.currentUser.id);
-        },
         filteredEmpRes() {
-            return this.reservations.filter(r => {
+            return this.allReservations.filter(r => {
                 const kw = this.empSearch.toLowerCase();
-                const tripName = this.reservationTripName(r.id);
-                const ok1 = !kw || [r.firstName, r.lastName, r.email, tripName].some(v => (v || '').toLowerCase().includes(kw));
-                const ok2 = !this.empStatusFilter || r.reservationStatus === this.empStatusFilter;
+                const ok1 = !kw || [r.firstName, r.lastName, r.email, r.tripname].some(v => (v||'').toLowerCase().includes(kw));
+                const ok2 = !this.empStatusFilter || r.reservationstatus === this.empStatusFilter;
                 return ok1 && ok2;
             });
         },
         totalRevenue() {
-            return this.reservations.filter(r => r.reservationStatus !== 'Cancelled').reduce((s, r) => s + parseFloat(r.total), 0).toFixed(0);
+            return this.allReservations
+                .filter(r => r.reservationstatus !== 'Cancelled')
+                .reduce((s, r) => s + Number(r.total || 0), 0)
+                .toFixed(0);
         },
         todayStr() {
             return new Date().toISOString().split('T')[0];
@@ -1147,75 +1075,101 @@ createApp({
     },
 
     methods: {
+        // ── Navigation ──────────────────────────────────────
         go(path) {
             window.scrollTo(0, 0);
-            if (path === '/') { this.page = 'home'; return; }
-            if (path === '/trips') { this.page = 'trips'; return; }
-            if (path.startsWith('/trips/') && !path.includes('edit')) {
+            if (path === '/') { this.page = 'home'; this.loadTrips(); return; }
+            if (path === '/trips') { this.page = 'trips'; this.loadTrips(); return; }
+            if (path.startsWith('/trips/')) {
                 this.tripIdParam = parseInt(path.split('/')[2]);
-                this.page = 'tripDetail'; return;
+                this.page = 'tripDetail';
+                // Reload trips to get fresh enrolledSpots count
+                this.loadTrips();
+                return;
             }
             if (path.startsWith('/reserve/')) {
                 this.tripIdParam = parseInt(path.split('/')[2]);
-                const trip = this.trips.find(t => t.id === this.tripIdParam);
+                const trip = this.trips.find(t => t.tripid === this.tripIdParam);
                 if (trip && this.currentUser) {
-                    this.resForm = { firstName: this.currentUser.firstName, lastName: this.currentUser.lastName, email: this.currentUser.email, phone: this.currentUser.phone || '', date: trip.nextDate, participants: 1, notes: '' };
+                    this.resForm = {
+                        firstName: this.currentUser.firstName,
+                        lastName: this.currentUser.lastName,
+                        email: this.currentUser.email,
+                        phone: this.currentUser.phone || '',
+                        participants: 1,
+                        notes: ''
+                    };
                 }
-                this.page = 'reserve'; return;
+                this.resErr = '';
+                this.page = 'reserve';
+                return;
             }
             if (path === '/confirmation') { this.page = 'confirmation'; return; }
             if (path === '/my-reservations') {
                 if (!this.currentUser) { this.go('/login'); return; }
-                this.page = 'myres'; return;
+                this.page = 'myres';
+                this.loadMyReservations();
+                return;
             }
-            if (path === '/login') { this.loginErr = ''; this.page = 'login'; return; }
+            if (path === '/login')    { this.loginErr = ''; this.page = 'login'; return; }
             if (path === '/register') { this.regErr = ''; this.page = 'register'; return; }
             if (path === '/profile') {
                 if (!this.currentUser) { this.go('/login'); return; }
                 this.profForm = { firstName: this.currentUser.firstName, lastName: this.currentUser.lastName, email: this.currentUser.email, phone: this.currentUser.phone || '' };
-                this.page = 'profile'; return;
+                this.page = 'profile';
+                return;
             }
             if (path === '/employee') {
                 if (!this.currentUser || this.currentUser.role !== 'Employee') { this.go('/login'); return; }
-                this.page = 'empDash'; return;
+                this.page = 'empDash';
+                this.loadTrips();
+                this.loadAllReservations();
+                return;
             }
-            if (path === '/employee/trips') { this.page = 'empTrips'; return; }
-            if (path === '/employee/reservations') { this.page = 'empRes'; return; }
+            if (path === '/employee/trips') {
+                this.page = 'empTrips';
+                this.loadTrips();
+                this.loadEmployees();
+                return;
+            }
+            if (path === '/employee/reservations') {
+                this.page = 'empRes';
+                this.loadAllReservations();
+                return;
+            }
             this.page = '404';
         },
         viewTrip(id) { this.go('/trips/' + id); },
+
+        // ── Flash ───────────────────────────────────────────
         flash(msg, type = 'success') {
             this.alert = { show: true, type, message: msg };
             setTimeout(() => this.alert.show = false, 4000);
         },
+
+        // ── Helpers ─────────────────────────────────────────
         fmtDate(d) {
             if (!d) return '';
-            return new Date(d).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+            return new Date(d).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC' });
         },
-        tripImg(id) {
-            const t = this.trips.find(t => t.id === id);
-            return t ? t.imageUrl : '';
+        tripImg(trip) {
+            return TRIP_IMAGES[trip.tripid] || FALLBACK_IMG;
         },
-        employeeNameById(empid) {
-            const emp = this.employees.find(e => e.id === empid);
-            return emp ? `${emp.firstName} ${emp.lastName}` : 'Unassigned';
+        spotsLeft(trip) {
+            const max = Number(trip.maxcapacity || 0);
+            const enrolled = Number(trip.enrolledSpots || 0);
+            return Math.max(max - enrolled, 0);
         },
-        tripIdsForReservation(reservationId) {
-            return this.reservationTrips.filter(rt => rt.reservationId === reservationId).map(rt => rt.tripId);
+        diffLabel(trip) {
+            const miles = Number(trip.distancemiles || 0);
+            const hrs   = Number(trip.lengthhours || 0);
+            if (miles >= 12 || hrs >= 10) return 'Hard';
+            if (miles >= 6  || hrs >= 5)  return 'Moderate';
+            return 'Easy';
         },
-        reservationTripName(reservationId) {
-            const tripId = this.tripIdsForReservation(reservationId)[0];
-            const trip = this.trips.find(t => t.id === tripId);
-            return trip ? trip.name : 'Unknown Trip';
-        },
-        spotsLeftForTrip(tripId) {
-            const trip = this.trips.find(t => t.id === tripId);
-            if (!trip) return 0;
-            const reserved = this.reservations
-                .filter(r => r.reservationStatus !== 'Cancelled')
-                .filter(r => this.tripIdsForReservation(r.id).includes(tripId))
-                .reduce((sum, r) => sum + Number(r.participants || 0), 0);
-            return Math.max(trip.maxParticipants - reserved, 0);
+        diffBadge(trip) {
+            const d = this.diffLabel(trip);
+            return d === 'Hard' ? 'badge-hard' : d === 'Moderate' ? 'badge-moderate' : 'badge-easy';
         },
         clearSearch() {
             this.search = { keyword: '', difficulty: '', maxPrice: '', sort: 'name' };
@@ -1224,94 +1178,183 @@ createApp({
             document.getElementById('about')?.scrollIntoView({ behavior: 'smooth' });
         },
 
-        // Auth
-        login() {
-            const u = this.users.find(u => u.username === this.loginForm.username && u.password === this.loginForm.password);
-            if (u) {
-                this.currentUser = u;
-                this.loginErr = '';
+        // ── Data loaders ─────────────────────────────────────
+        async loadTrips() {
+            this.loading = true;
+            try { this.trips = await api('GET', '/api/trips'); }
+            catch(e) { this.flash('Could not load trips: ' + e.message, 'danger'); }
+            finally { this.loading = false; }
+        },
+        async loadEmployees() {
+            try { this.employees = await api('GET', '/api/employees'); }
+            catch(e) { console.error(e); }
+        },
+        async loadAllReservations() {
+            this.loading = true;
+            try { this.allReservations = await api('GET', '/api/reservations'); }
+            catch(e) { this.flash('Could not load reservations: ' + e.message, 'danger'); }
+            finally { this.loading = false; }
+        },
+        async loadMyReservations() {
+            if (!this.currentUser) return;
+            this.loading = true;
+            try { this.myReservations = await api('GET', '/api/reservations?customerId=' + this.currentUser.id); }
+            catch(e) { this.flash('Could not load your reservations: ' + e.message, 'danger'); }
+            finally { this.loading = false; }
+        },
+
+        // ── Auth ─────────────────────────────────────────────
+        async login() {
+            this.submitting = true;
+            this.loginErr = '';
+            try {
+                const user = await api('POST', '/api/login', this.loginForm);
+                this.currentUser = user;
                 this.loginForm = { username: '', password: '' };
-                this.go(u.role === 'Employee' ? '/employee' : '/');
-                this.flash(`Welcome back, ${u.firstName}!`);
-            } else {
+                this.go(user.role === 'Employee' ? '/employee' : '/');
+                this.flash(`Welcome back, ${user.firstName}!`);
+            } catch(e) {
                 this.loginErr = 'Invalid username or password.';
+            } finally {
+                this.submitting = false;
             }
         },
         logout() {
             this.currentUser = null;
+            this.allReservations = [];
+            this.myReservations = [];
             this.go('/');
             this.flash('You have been signed out.', 'info');
         },
-        register() {
-            if (this.users.find(u => u.username === this.regForm.username)) { this.regErr = 'Username already taken.'; return; }
-            if (this.users.find(u => u.email === this.regForm.email)) { this.regErr = 'Email already registered.'; return; }
-            const newUser = { id: this.users.length + 1, role: 'Customer', createdAt: new Date(), ...this.regForm };
-            this.users.push(newUser);
-            this.currentUser = newUser;
+        async register() {
+            this.submitting = true;
             this.regErr = '';
-            this.go('/');
-            this.flash(`Welcome to TrailBuddy, ${newUser.firstName}!`);
+            try {
+                const user = await api('POST', '/api/register', this.regForm);
+                this.currentUser = user;
+                this.regErr = '';
+                this.go('/');
+                this.flash(`Welcome to TrailBuddy, ${user.firstName}!`);
+            } catch(e) {
+                this.regErr = e.message || 'Registration failed. Username or email may already be in use.';
+            } finally {
+                this.submitting = false;
+            }
         },
-        saveProfile() {
-            Object.assign(this.currentUser, this.profForm);
-            this.flash('Profile updated successfully!');
-        },
-
-        // Reservations
-        submitReservation() {
-            const trip = this.selectedTrip;
-            if (!trip || this.spotsLeftForTrip(trip.id) < this.resForm.participants) return;
-            const res = {
-                id: this.nextResId++,
-                userId: this.currentUser.id,
-                ...this.resForm,
-                total: (trip.price * this.resForm.participants).toFixed(2),
-                reservationDate: new Date().toISOString().split('T')[0],
-                reservationStatus: 'Pending',
-            };
-            this.reservations.push(res);
-            this.reservationTrips.push({ reservationId: res.id, tripId: trip.id });
-            this.lastRes = res;
-            this.go('/confirmation');
-        },
-        cancelRes(id) {
-            if (!confirm('Cancel this reservation?')) return;
-            const res = this.reservations.find(r => r.id === id);
-            if (res) {
-                res.reservationStatus = 'Cancelled';
-                this.flash('Reservation cancelled.', 'warning');
+        async saveProfile() {
+            if (!this.currentUser || this.currentUser.role !== 'Customer') return;
+            try {
+                await api('PUT', '/api/customers/' + this.currentUser.id, this.profForm);
+                Object.assign(this.currentUser, this.profForm);
+                this.flash('Profile updated successfully!');
+            } catch(e) {
+                this.flash('Could not save profile: ' + e.message, 'danger');
             }
         },
 
-        // Trips CRUD
+        // ── Reservations ─────────────────────────────────────
+        async submitReservation() {
+            const trip = this.selectedTrip;
+            if (!trip) return;
+            this.submitting = true;
+            this.resErr = '';
+            try {
+                const result = await api('POST', '/api/reservations', {
+                    tripId: trip.tripid,
+                    customerId: this.currentUser.id,
+                    participants: this.resForm.participants,
+                });
+                this.lastRes = {
+                    id: result.id,
+                    tripname: trip.tripname,
+                    participants: this.resForm.participants,
+                    total: (trip.tripprice * this.resForm.participants).toFixed(2),
+                };
+                // Refresh trips so spots update
+                await this.loadTrips();
+                this.go('/confirmation');
+            } catch(e) {
+                this.resErr = e.message || 'Could not complete reservation. Please try again.';
+            } finally {
+                this.submitting = false;
+            }
+        },
+        async cancelRes(id) {
+            if (!confirm('Cancel this reservation?')) return;
+            try {
+                await api('PUT', '/api/reservations/' + id + '/status', { status: 'Cancelled' });
+                const res = this.myReservations.find(r => r.id === id);
+                if (res) res.reservationstatus = 'Cancelled';
+                this.flash('Reservation cancelled.', 'warning');
+            } catch(e) {
+                this.flash('Could not cancel: ' + e.message, 'danger');
+            }
+        },
+        async updateResStatus(res) {
+            try {
+                await api('PUT', '/api/reservations/' + res.id + '/status', { status: res.reservationstatus });
+                this.flash('Reservation #' + res.id + ' updated to ' + res.reservationstatus + '.');
+            } catch(e) {
+                this.flash('Could not update status: ' + e.message, 'danger');
+            }
+        },
+
+        // ── Trips CRUD ───────────────────────────────────────
         openTripModal(trip) {
             if (trip) {
                 this.tripModalMode = 'edit';
-                this.editingTripId = trip.id;
-                this.tripForm = { name: trip.name, empid: trip.empid, street: trip.street, city: trip.city, state: trip.state, zip: trip.zip, lengthHours: trip.lengthHours, distanceMiles: trip.distanceMiles, tripStatus: trip.tripStatus, startTime: trip.startTime, price: trip.price, maxParticipants: trip.maxParticipants, nextDate: trip.nextDate, imageUrl: trip.imageUrl || '', description: trip.description, difficulty: trip.difficulty };
+                this.editingTripId = trip.tripid;
+                // Format date for input[type=date]
+                const d = trip.tripdate ? new Date(trip.tripdate).toISOString().split('T')[0] : '';
+                this.tripForm = {
+                    tripname: trip.tripname, empid: trip.empid,
+                    street: trip.street || '', city: trip.city, state: trip.state, zip: trip.zip,
+                    lengthhours: trip.lengthhours, distancemiles: trip.distancemiles,
+                    tripstatus: trip.tripstatus, starttime: (trip.starttime||'08:00:00').slice(0,5),
+                    tripprice: trip.tripprice, maxcapacity: trip.maxcapacity,
+                    tripdate: d, tripdescription: trip.tripdescription || '',
+                };
             } else {
                 this.tripModalMode = 'create';
                 this.editingTripId = null;
-                this.tripForm = { name: '', empid: null, street: '', city: '', state: '', zip: '', lengthHours: 1, distanceMiles: 0, tripStatus: 'Scheduled', startTime: '08:00', price: 0, maxParticipants: 12, nextDate: '', imageUrl: '', description: '', difficulty: 'Moderate' };
+                this.tripForm = { tripname: '', empid: null, street: '', city: '', state: '', zip: '', lengthhours: 1, distancemiles: 0, tripstatus: 'Scheduled', starttime: '08:00', tripprice: 0, maxcapacity: 12, tripdate: '', tripdescription: '' };
             }
             new bootstrap.Modal(document.getElementById('tripModal')).show();
         },
-        saveTripModal() {
-            if (this.tripModalMode === 'create') {
-                this.trips.push({ id: this.nextTripId++, reviewCount: 0, highlights: [], ...this.tripForm });
-                this.flash('Trip added successfully!');
-            } else {
-                const idx = this.trips.findIndex(t => t.id === this.editingTripId);
-                if (idx !== -1) Object.assign(this.trips[idx], this.tripForm);
-                this.flash('Trip updated successfully!');
+        async saveTripModal() {
+            this.submitting = true;
+            try {
+                if (this.tripModalMode === 'create') {
+                    await api('POST', '/api/trips', this.tripForm);
+                    this.flash('Trip added successfully!');
+                } else {
+                    await api('PUT', '/api/trips/' + this.editingTripId, this.tripForm);
+                    this.flash('Trip updated successfully!');
+                }
+                bootstrap.Modal.getInstance(document.getElementById('tripModal')).hide();
+                await this.loadTrips();
+            } catch(e) {
+                this.flash('Could not save trip: ' + e.message, 'danger');
+            } finally {
+                this.submitting = false;
             }
-            bootstrap.Modal.getInstance(document.getElementById('tripModal')).hide();
         },
-        deleteTrip(id) {
+        async deleteTrip(id) {
             if (!confirm('Delete this trip? This cannot be undone.')) return;
-            this.trips = this.trips.filter(t => t.id !== id);
-            this.flash('Trip deleted.', 'warning');
+            try {
+                await api('DELETE', '/api/trips/' + id);
+                await this.loadTrips();
+                this.flash('Trip deleted.', 'warning');
+            } catch(e) {
+                this.flash('Could not delete trip: ' + e.message, 'danger');
+            }
         },
+    },
+
+    mounted() {
+        // Load trips on first paint
+        this.loadTrips();
+        this.loadEmployees();
     },
 }).mount('#app');
 </script>

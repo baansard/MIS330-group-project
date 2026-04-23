@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\Cole B\\Downloads\\Mis330\\Mis330Gproj\\MIS330-group-project\\MIS330-group-project.csproj": {}
+    "C:\\Users\\Cole B\\downloads\\Mis330\\Mis330Gproj\\MIS330-group-project\\MIS330-group-project.csproj": {}
   },
   "projects": {
-    "C:\\Users\\Cole B\\Downloads\\Mis330\\Mis330Gproj\\MIS330-group-project\\MIS330-group-project.csproj": {
+    "C:\\Users\\Cole B\\downloads\\Mis330\\Mis330Gproj\\MIS330-group-project\\MIS330-group-project.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\Cole B\\Downloads\\Mis330\\Mis330Gproj\\MIS330-group-project\\MIS330-group-project.csproj",
+        "projectUniqueName": "C:\\Users\\Cole B\\downloads\\Mis330\\Mis330Gproj\\MIS330-group-project\\MIS330-group-project.csproj",
         "projectName": "MIS330-group-project",
-        "projectPath": "C:\\Users\\Cole B\\Downloads\\Mis330\\Mis330Gproj\\MIS330-group-project\\MIS330-group-project.csproj",
+        "projectPath": "C:\\Users\\Cole B\\downloads\\Mis330\\Mis330Gproj\\MIS330-group-project\\MIS330-group-project.csproj",
         "packagesPath": "C:\\Users\\Cole B\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\Cole B\\Downloads\\Mis330\\Mis330Gproj\\MIS330-group-project\\obj\\",
+        "outputPath": "C:\\Users\\Cole B\\downloads\\Mis330\\Mis330Gproj\\MIS330-group-project\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
           "C:\\Users\\Cole B\\AppData\\Roaming\\NuGet\\NuGet.Config"
@@ -43,6 +43,12 @@
       "frameworks": {
         "net9.0": {
           "targetAlias": "net9.0",
+          "dependencies": {
+            "MySqlConnector": {
+              "target": "Package",
+              "version": "[2.3.7, )"
+            }
+          },
           "imports": [
             "net461",
             "net462",
@@ -62,7 +68,7 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.202/PortableRuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.203/PortableRuntimeIdentifierGraph.json"
         }
       }
     }

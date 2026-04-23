@@ -1,8 +1,11 @@
 {
   "version": 2,
-  "dgSpecHash": "V7EEl+uIv/g=",
+  "dgSpecHash": "Of9NDy+lwVo=",
   "success": true,
-  "projectFilePath": "C:\\Users\\Cole B\\Downloads\\Mis330\\Mis330Gproj\\MIS330-group-project\\MIS330-group-project.csproj",
-  "expectedPackageFiles": [],
+  "projectFilePath": "C:\\Users\\Cole B\\downloads\\Mis330\\Mis330Gproj\\MIS330-group-project\\MIS330-group-project.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\Cole B\\.nuget\\packages\\microsoft.extensions.logging.abstractions\\7.0.1\\microsoft.extensions.logging.abstractions.7.0.1.nupkg.sha512",
+    "C:\\Users\\Cole B\\.nuget\\packages\\mysqlconnector\\2.3.7\\mysqlconnector.2.3.7.nupkg.sha512"
+  ],
   "logs": []
 }
