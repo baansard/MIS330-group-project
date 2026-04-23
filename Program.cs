@@ -18,7 +18,7 @@ app.UseStaticFiles();
 // ─────────────────────────────────────────────
 static async Task<List<Dictionary<string, object?>>> Query(MySqlConnection db, string sql, object? p = null)
 {
-    await db.OpenAsync();
+    if (db.State != System.Data.ConnectionState.Open) await db.OpenAsync();
     await using var cmd = db.CreateCommand();
     cmd.CommandText = sql;
     if (p != null)

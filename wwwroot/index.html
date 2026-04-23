@@ -583,15 +583,15 @@
                                     </div>
                                     <div class="col-12">
                                         <label class="form-label fw-semibold">Username</label>
-                                        <input type="text" class="form-control" v-model="regForm.username" required>
+                                        <input type="text" class="form-control" v-model="regForm.username" required maxlength="16">
                                     </div>
                                     <div class="col-12">
                                         <label class="form-label fw-semibold">Email</label>
-                                        <input type="email" class="form-control" v-model="regForm.email" required>
+                                        <input type="email" class="form-control" v-model="regForm.email" required maxlength="30">
                                     </div>
                                     <div class="col-12">
                                         <label class="form-label fw-semibold">Password</label>
-                                        <input type="password" class="form-control" v-model="regForm.password" required minlength="6" placeholder="At least 6 characters">
+                                        <input type="password" class="form-control" v-model="regForm.password" required minlength="6" maxlength="16" placeholder="At least 6 characters">
                                     </div>
                                     <div class="col-12">
                                         <div v-if="regErr" class="alert alert-danger py-2 small">{{ regErr }}</div>
